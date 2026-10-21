@@ -1,0 +1,40 @@
+namespace PaperPixelGames.Framework.Enums
+{
+	public enum SoundType
+	{
+		Empty = 0,
+		Popup_Open = 1,
+		Popup_Button = 2,
+		Popup_Close = 3,
+		Click_Down = 4,
+		Click_Up = 5,
+		Harpoon_Equip = 18,
+		Harpoon_Unequip = 19,
+		Harpoon_Reload = 20,
+		Harpoon_InAim = 21,
+		Harpoon_OutAim = 22,
+		Harpoon_Shoot = 23,
+		Harpoon_Retract = 24,
+		Harpoon_Hit_Concrete = 25,
+		Harpoon_Hit_Sand = 26,
+		Harpoon_Hit_Water = 27,
+		Harpoon_Hit_Flesh = 28,
+		Harpoon_Rope_Tension = 29,
+		Harpoon_Rope_Fail = 30,
+		Harpoon_Rope_Success = 31,
+		Fish_Run = 32,
+		Item_Pick = 34,
+		Item_Put = 35,
+		Scrap_Forge_Lever_Success = 38,
+		Scrap_Forge_Lever_Fail = 39,
+		Scrap_Forge_Button = 40,
+		Repaired = 41,
+		Money_Earned = 42,
+		Octopus_Trap = 43,
+		Radio_Break = 44,
+		Radio_Repair = 45,
+		Radio_PowerOn = 46,
+		Radio_PowerOff = 47,
+		Radio_ChangeTrack = 48
+	}
+}
