@@ -1,0 +1,16 @@
+using System;using System.Linq;using System.Collections.Generic;using Cysharp.Threading.Tasks;using UnityEngine;using SushiAndFish.Casino;
+public static partial class CityExpansionPlayAudit {
+ [Serializable]public class CoastSupportPoint{public Vector3 feet,surface;public string support,mode;public bool grounded;public float gap,motorDistance;public Vector3 motorPoint,motorNormal;public string motorSupport;}
+ static CoastSupportPoint ShorePoint(ParkCasinoIntegration c){var player=c.HostPlayer;var p=player.transform.position;var hit=Physics.RaycastAll(p+Vector3.up*.3f,Vector3.down,35,~0,QueryTriggerInteraction.Ignore).Where(h=>!h.transform.IsChildOf(player.transform)&&h.normal.y>.3f).OrderBy(h=>h.distance).FirstOrDefault();return new CoastSupportPoint{motorDistance=player.FirstPersonCharacter.characterMovement.groundDistance,motorPoint=player.FirstPersonCharacter.characterMovement.groundPoint,motorNormal=player.FirstPersonCharacter.characterMovement.groundNormal,motorSupport=player.FirstPersonCharacter.characterMovement.groundTransform?FullPath(player.FirstPersonCharacter.characterMovement.groundTransform):"none",feet=p,surface=hit.point,support=hit.collider?FullPath(hit.transform):"none",gap=hit.collider?p.y-hit.point.y:99,grounded=player.FirstPersonCharacter.IsGrounded(),mode=player.FirstPersonCharacter.movementMode.ToString()};}
+ static async UniTask ShorePhysics(ParkCasinoIntegration c){
+  coast.shoreSamples=new List<CoastSupportPoint>();coast.phantomSupports=0;
+  var visible=Rect.MinMaxRect(-123.1f,-47.3f,-55.0f,-7.2f);
+  for(float x=-165;x<=-50;x+=5)for(float z=-95;z<=45;z+=5){if(visible.Contains(new Vector2(x,z)))continue;foreach(var h in Physics.RaycastAll(new Vector3(x,12,z),Vector3.down,35,~0,QueryTriggerInteraction.Ignore))if(h.normal.y>.3f&&h.transform.IsChildOf(c.ModuleRoot)){coast.phantomSupports++;coast.diagnostics.Add("UNEXPECTED_SUPPORT "+FullPath(h.transform)+" @"+h.point);}}
+  foreach(var p in new[]{new Vector3(-145,8,16),new Vector3(-140,8,23),new Vector3(-130,8,29),new Vector3(-120,8,37),new Vector3(-10.9f,8,27),new Vector3(.78f,8,27)}){
+   var ground=Physics.RaycastAll(p,Vector3.down,50,~0,QueryTriggerInteraction.Ignore).Where(h=>!h.transform.IsChildOf(c.HostPlayer.transform)&&h.normal.y>.3f).OrderBy(h=>h.distance).FirstOrDefault();if(!ground.collider)continue;var start=ground.point+Vector3.up*1.5f;c.HostPlayer.TeleportPlayer(start,true);c.HostPlayer.FirstPersonCharacter.SetVelocity(Vector3.zero);await Pause(1.2f);coast.shoreSamples.Add(ShorePoint(c));
+  }
+  var startPoint=new Vector3(-140,5,10);c.HostPlayer.TeleportPlayer(startPoint,true);c.HostPlayer.FirstPersonCharacter.SetVelocity(Vector3.zero);await Pause(1);coast.shoreStartY=c.HostPlayer.transform.position.y;
+  foreach(float z in new[]{16f,23f,30f,37f}){await MoveToward(c,new Vector3(-140,-.5f,z),2.5f);coast.shoreSamples.Add(ShorePoint(c));}coast.shoreEndY=c.HostPlayer.transform.position.y;
+  coast.shoreFalls=coast.phantomSupports==0&&coast.shoreSamples.Count>=8&&coast.shoreSamples.Where(p=>p.grounded&&p.mode=="Walking").All(p=>p.motorDistance<.10f&&p.motorDistance>-.10f&&!p.motorSupport.Contains("/Base/"))&&coast.shoreSamples.All(p=>p.mode!="Flying")&&coast.shoreEndY<coast.shoreStartY-.5f&&coast.shoreSamples.Any(p=>p.feet.y<1.2f);
+ }
+}

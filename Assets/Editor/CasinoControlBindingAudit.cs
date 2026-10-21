@@ -1,0 +1,17 @@
+using System;using System.IO;using System.Linq;using System.Collections.Generic;using System.Reflection;using UnityEngine;using UnityEngine.Events;using UnityEditor;using SushiAndFish.Casino.Original;
+public static class CasinoControlBindingAudit {
+ [Serializable]public class Result{public string utc;public bool passed;public int prefabs,gamePrefabs,interactables,persistentCalls,customControls,challengeAssets,missingChallengeTypes;public List<string> failures=new List<string>(),unusedPrototypes=new List<string>();}
+ static string PathOf(Transform t)=>t.parent?PathOf(t.parent)+"/"+t.name:t.name;
+ public static void Verify(){var q=new Result{utc=DateTime.UtcNow.ToString("o")};
+  foreach(var guid in AssetDatabase.FindAssets("t:Prefab",new[]{"Assets/SushiAndFish/Casino/Imported/Resources/Casino"})){string path=AssetDatabase.GUIDToAssetPath(guid);var go=AssetDatabase.LoadAssetAtPath<GameObject>(path);if(!go)continue;var games=go.GetComponentsInChildren<GameBase>(true);var controls=go.GetComponentsInChildren<InteractableBase>(true);if(games.Length==0&&!go.GetComponent<Keypad>())continue;if(games.Length==1&&games[0] is ClawMachine){q.unusedPrototypes.Add(path+": original empty ClawMachine class; referenced only by network spawn registries, absent from floor loot and casino scenes; not a deployed game.");continue;}q.prefabs++;q.gamePrefabs+=games.Length;
+   foreach(var b in controls){q.interactables++;if(!(b is InteractableEventTrigger)){q.customControls++;continue;}var so=new SerializedObject(b);
+    foreach(var field in new[]{"onInteractEvent","serverOnInteractEvent","rpcOnInteractEvent","onHoverEvent","onHoverExitEvent","onHoldEvent","onHoldExitEvent"}){var calls=so.FindProperty(field+".m_PersistentCalls.m_Calls");if(calls==null)continue;for(int i=0;i<calls.arraySize;i++){var call=calls.GetArrayElementAtIndex(i);if(call.FindPropertyRelative("m_CallState").enumValueIndex==0)continue;var target=call.FindPropertyRelative("m_Target").objectReferenceValue;string method=call.FindPropertyRelative("m_MethodName").stringValue;if(string.IsNullOrEmpty(method))continue;q.persistentCalls++;int mode=call.FindPropertyRelative("m_Mode").enumValueIndex;Type[] types=Type.EmptyTypes;
+      if(mode==0)types=new[]{typeof(PlayerInteract)};if(mode==2){string name=call.FindPropertyRelative("m_Arguments.m_ObjectArgumentAssemblyTypeName").stringValue;var t=Type.GetType(name,false)??typeof(UnityEngine.Object);types=new[]{t};}if(mode==3)types=new[]{typeof(int)};if(mode==4)types=new[]{typeof(float)};if(mode==5)types=new[]{typeof(string)};if(mode==6)types=new[]{typeof(bool)};
+      var info=target?UnityEventBase.GetValidMethodInfo(target,method,types):null;if(info==null||info.ReturnType!=typeof(void))q.failures.Add(path+"/"+PathOf(b.transform)+" "+field+" -> "+(target?target.GetType().FullName:"NULL")+"."+method+" mode="+mode);
+    }}
+   }
+  }
+  foreach(var guid in AssetDatabase.FindAssets("t:Challenge",new[]{"Assets/SushiAndFish/Casino/Imported/Resources/Casino"})){var path=AssetDatabase.GUIDToAssetPath(guid);var obj=AssetDatabase.LoadAssetAtPath<Challenge>(path);if(!obj)continue;q.challengeAssets++;if(UnityEditor.SerializationUtility.HasManagedReferencesWithMissingTypes(obj)){q.missingChallengeTypes++;q.failures.Add("Missing challenge condition type: "+path);}}
+  q.passed=q.gamePrefabs>=16&&q.interactables>50&&q.persistentCalls>50&&q.failures.Count==0&&q.missingChallengeTypes==0;File.WriteAllText(Path.Combine(IslandRevision20261018.Reports,"casino-control-binding-audit.json"),JsonUtility.ToJson(q,true));
+ }
+}

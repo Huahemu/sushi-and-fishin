@@ -1,0 +1,156 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!72 &7200000
+ComputeShader:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: OcclusionCullingDebug
+  variants:
+  - serializedVersion: 2
+    targetRenderer: 2
+    targetLevel: 0
+    kernels:
+    - serializedVersion: 3
+      name: ClearOcclusionDebug
+      uniqueVariants:
+      - serializedVersion: 2
+        cbVariantIndices: 00000000
+        cbs:
+        - name: OcclusionCullingCommonShaderVariables
+          generatedName:
+          bindPoint: 0
+          samplerBindPoint: -1
+          texDimension: -1
+          resType: 0
+        textures: []
+        builtinSamplers: []
+        inBuffers: []
+        outBuffers:
+        - name: _OcclusionDebugOverlay
+          generatedName:
+          bindPoint: 0
+          samplerBindPoint: -1
+          texDimension: -1
+          resType: 0
+        code: 44584243ef822c80cddba3ff61eca1e6262daf7501000000cc020000030000002c0000003c0000004c0000004953474e0800000000000000080000004f53474e0800000000000000080000005348455878020000500005009e0000006a08000159080004468e200000000000350000009e00000400e0110000000000040000005f000002421002005f0000023200020068000002010000009b0000040800000008000000010000003600000512001000000000000140000000000000300000012100000722001000000000000a001000000000000140000008000000030004031a001000000000004f000008620010000000000006010200a68b2004000000000a001000000000000100000722001000000000002a001000000000001a001000000000001f0004031a001000000000002300000b22001000000000002a1002001a80200000000000340000001a802004000000000a001000000000001e00000842001000000000000a0002000a802004000000000a001000000000001e00000622001000000000001a001000000000001a0002001e00000742001000000000002a0010000000000001400000040000002300000a22001000000000000a80200000000000340000001a001000000000002a00100000000000a800000912e01100000000001a0010000000000001400000000000000140000000000000150000011e00000712001000000000000a001000000000000140000001000000160000012000000932001000000000004600020002400000000000000000000000000000000000000100000712001000000000001a001000000000000a001000000000002000000622001000000000002a10020001400000000000000100000712001000000000001a001000000000000a001000000000001f0004030a00100000000000a800000912e0110000000000014000000000000001400000000000000140000000000000150000013e000001
+        threadGroupSize: 080000000800000001000000
+        requirements: 50241
+        keywords: []
+        isCompiled: 0
+      variantIndices:
+      - : 0
+      globalKeywords: []
+      localKeywords: []
+      dynamicKeywords: []
+    constantBuffers:
+    - name: OcclusionCullingCommonShaderVariables
+      byteSize: 864
+      params:
+      - name: _OccluderMipBounds
+        type: 5
+        offset: 0
+        arraySize: 8
+        rowCount: 1
+        colCount: 4
+      - name: _OccluderMipLayoutSizeX
+        type: 5
+        offset: 832
+        arraySize: 0
+        rowCount: 1
+        colCount: 1
+      - name: _OccluderMipLayoutSizeY
+        type: 5
+        offset: 836
+        arraySize: 0
+        rowCount: 1
+        colCount: 1
+    resourcesResolved: 1
+    compilerPlatform: 0
+    needsReflectionData: 0
+  - serializedVersion: 2
+    targetRenderer: 18
+    targetLevel: 0
+    kernels:
+    - serializedVersion: 3
+      name: ClearOcclusionDebug
+      uniqueVariants:
+      - serializedVersion: 2
+        cbVariantIndices: 00000000
+        cbs:
+        - name: OcclusionCullingCommonShaderVariables
+          generatedName:
+          bindPoint: 0
+          samplerBindPoint: -1
+          texDimension: -1
+          resType: 0
+        textures: []
+        builtinSamplers: []
+        inBuffers: []
+        outBuffers:
+        - name: _OcclusionDebugOverlay
+          generatedName:
+          bindPoint: 0
+          samplerBindPoint: -1
+          texDimension: -1
+          resType: 0
+        code: 44584243ef822c80cddba3ff61eca1e6262daf7501000000cc020000030000002c0000003c0000004c0000004953474e0800000000000000080000004f53474e0800000000000000080000005348455878020000500005009e0000006a08000159080004468e200000000000350000009e00000400e0110000000000040000005f000002421002005f0000023200020068000002010000009b0000040800000008000000010000003600000512001000000000000140000000000000300000012100000722001000000000000a001000000000000140000008000000030004031a001000000000004f000008620010000000000006010200a68b2004000000000a001000000000000100000722001000000000002a001000000000001a001000000000001f0004031a001000000000002300000b22001000000000002a1002001a80200000000000340000001a802004000000000a001000000000001e00000842001000000000000a0002000a802004000000000a001000000000001e00000622001000000000001a001000000000001a0002001e00000742001000000000002a0010000000000001400000040000002300000a22001000000000000a80200000000000340000001a001000000000002a00100000000000a800000912e01100000000001a0010000000000001400000000000000140000000000000150000011e00000712001000000000000a001000000000000140000001000000160000012000000932001000000000004600020002400000000000000000000000000000000000000100000712001000000000001a001000000000000a001000000000002000000622001000000000002a10020001400000000000000100000712001000000000001a001000000000000a001000000000001f0004030a00100000000000a800000912e0110000000000014000000000000001400000000000000140000000000000150000013e000001
+        threadGroupSize: 080000000800000001000000
+        requirements: 50241
+        keywords: []
+        isCompiled: 0
+      variantIndices:
+      - : 0
+      globalKeywords: []
+      localKeywords: []
+      dynamicKeywords: []
+    constantBuffers:
+    - name: OcclusionCullingCommonShaderVariables
+      byteSize: 864
+      params:
+      - name: _OccluderMipBounds
+        type: 5
+        offset: 0
+        arraySize: 8
+        rowCount: 1
+        colCount: 4
+      - name: _OccluderMipLayoutSizeX
+        type: 5
+        offset: 832
+        arraySize: 0
+        rowCount: 1
+        colCount: 1
+      - name: _OccluderMipLayoutSizeY
+        type: 5
+        offset: 836
+        arraySize: 0
+        rowCount: 1
+        colCount: 1
+    resourcesResolved: 1
+    compilerPlatform: 0
+    needsReflectionData: 0
+  m_CompilationContext:
+    serializedVersion: 2
+    buildTarget:
+      platform: 0
+      subTarget: 0
+      extendedPlatform: 0
+      isEditor: 0
+    platformGroup: 0
+    sourceFileName:
+    source:
+    sourceFile:
+    kernels: []
+    kernelMacros: []
+    prunedKeywords: []
+    compilationFlags: 0
+    supportedAPIs: 0
+    useDxcAPIs: 0
+    neverUseDxcAPIs: 0
+    includeHash0: 0
+    includeHash1: 0
+    includeHash2: 0
+    includeHash3: 0
+    buildTargetAPIMask: 0
+  errors: []
