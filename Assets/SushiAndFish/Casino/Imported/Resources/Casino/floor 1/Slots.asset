@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b090dad82f55a8bb9f0ed9023631869, type: 3}
+  m_Name: Slots
+  m_EditorClassIdentifier:
+  challengeID: 15
+  challengeName: Jackpot Hunter
+  linkedAchievement: {fileID: 11400000, guid: d3379182d5a1573a91b1df2fc6581909, type: 2}
+  description: Win with 10X on Slot Machine
+  floorIndex: 0
+  manualTicketReward: 8
+  conditions:
+  - rid: 7183828885494300682
+  - rid: 7183828885494300681
+  requireAllSimultaneously: 1
+  repeatable: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 7183828885494300681
+      type: {class: PayoutMultiplierConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        minPayoutMultiplier: 10
+        maxPayoutMultiplier: 0
+    - rid: 7183828885494300682
+      type: {class: GameTypeConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        requiredGameType: 12

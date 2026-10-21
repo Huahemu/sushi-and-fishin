@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b090dad82f55a8bb9f0ed9023631869, type: 3}
+  m_Name: WheelofFortune
+  m_EditorClassIdentifier:
+  challengeID: 4
+  challengeName: Spin The Wheel
+  linkedAchievement: {fileID: 11400000, guid: 8a953ed3cd035b5b9d4a23df8147f860, type: 2}
+  description: Win 3 games with a minimum bet of [minAmount] on wheel of fortune
+  floorIndex: 0
+  manualTicketReward: 7
+  conditions:
+  - rid: 7477605029765709834
+  - rid: 7477605029765709835
+  requireAllSimultaneously: 1
+  repeatable: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 7477605029765709834
+      type: {class: WinCountConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 0
+        requiredWins: 3
+        consecutive: 0
+        specificGameType: 13
+        useSpecificGameType: 1
+    - rid: 7477605029765709835
+      type: {class: BetAmountConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        minBetMultiplier: 0.1
+        maxBetMultiplier: 0
+        checkTotalBet: 0

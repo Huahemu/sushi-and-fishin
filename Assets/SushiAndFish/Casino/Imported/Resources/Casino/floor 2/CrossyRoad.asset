@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b090dad82f55a8bb9f0ed9023631869, type: 3}
+  m_Name: CrossyRoad
+  m_EditorClassIdentifier:
+  challengeID: 14
+  challengeName: Winner Winner Penguin Dinner
+  linkedAchievement: {fileID: 11400000, guid: 46cdd2daffcf571eb977b60aa4f17be1, type: 2}
+  description: Win at least 3x 2 times in a row on penguin cross.
+  floorIndex: 1
+  manualTicketReward: 10
+  conditions:
+  - rid: 7477605209846317062
+  - rid: 7477605209846317063
+  requireAllSimultaneously: 1
+  repeatable: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 7477605209846317062
+      type: {class: WinCountConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 0
+        requiredWins: 2
+        consecutive: 1
+        specificGameType: 3
+        useSpecificGameType: 1
+    - rid: 7477605209846317063
+      type: {class: PayoutMultiplierConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        minPayoutMultiplier: 3
+        maxPayoutMultiplier: 0

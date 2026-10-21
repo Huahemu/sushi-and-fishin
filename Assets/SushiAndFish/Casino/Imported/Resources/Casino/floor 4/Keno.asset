@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b090dad82f55a8bb9f0ed9023631869, type: 3}
+  m_Name: Keno
+  m_EditorClassIdentifier:
+  challengeID: 10
+  challengeName: Marked to Win
+  linkedAchievement: {fileID: 11400000, guid: 97b962d1e64d5f9194921f0cc98a63fd, type: 2}
+  description: Profit [minAmount] on keno.
+  floorIndex: 3
+  manualTicketReward: 12
+  conditions:
+  - rid: 7477605035387912195
+  - rid: 7477605035387912196
+  requireAllSimultaneously: 1
+  repeatable: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 7477605035387912195
+      type: {class: ProfitConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 0
+        minProfitMultiplier: 0.3
+        checkTotalProfit: 1
+    - rid: 7477605035387912196
+      type: {class: GameTypeConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        requiredGameType: 7

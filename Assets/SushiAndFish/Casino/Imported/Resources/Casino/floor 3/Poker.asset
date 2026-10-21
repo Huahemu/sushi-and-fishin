@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b090dad82f55a8bb9f0ed9023631869, type: 3}
+  m_Name: Poker
+  m_EditorClassIdentifier:
+  challengeID: 17
+  challengeName: Poker Face
+  linkedAchievement: {fileID: 11400000, guid: 40acd28c03e45ab2a3cbc318cc7ab3e1, type: 2}
+  description: Don't lock cards and win with a hand equal to or better than two of a kind on 1P Poker
+  floorIndex: 2
+  manualTicketReward: 14
+  conditions:
+  - rid: 2463912445217603864
+  - rid: 2463912445217603865
+  requireAllSimultaneously: 1
+  repeatable: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 2463912445217603864
+      type: {class: PokerHandConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 0
+        minHandRank: 2
+        requireNoLockedCards: 1
+        requireWin: 0
+    - rid: 2463912445217603865
+      type: {class: GameTypeConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        requiredGameType: 14

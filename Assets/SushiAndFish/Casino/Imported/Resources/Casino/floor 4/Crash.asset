@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b090dad82f55a8bb9f0ed9023631869, type: 3}
+  m_Name: Crash
+  m_EditorClassIdentifier:
+  challengeID: 36
+  challengeName: Safe Exit
+  linkedAchievement: {fileID: 11400000, guid: 3c50ad25dd4b5f2d8c6e1178941e2315, type: 2}
+  description: Win 4 times in a row with a minimum bet of [minAmount] on crash.
+  floorIndex: 3
+  manualTicketReward: 16
+  conditions:
+  - rid: 7477605029765709841
+  - rid: 7477605211253243905
+  requireAllSimultaneously: 1
+  repeatable: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 7477605029765709841
+      type: {class: WinCountConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 0
+        requiredWins: 4
+        consecutive: 1
+        specificGameType: 2
+        useSpecificGameType: 1
+    - rid: 7477605211253243905
+      type: {class: BetAmountConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        minBetMultiplier: 0.05
+        maxBetMultiplier: 0
+        checkTotalBet: 0

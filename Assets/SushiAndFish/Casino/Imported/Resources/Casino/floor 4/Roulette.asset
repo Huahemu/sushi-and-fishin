@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b090dad82f55a8bb9f0ed9023631869, type: 3}
+  m_Name: Roulette
+  m_EditorClassIdentifier:
+  challengeID: 19
+  challengeName: Ball in Motion
+  linkedAchievement: {fileID: 11400000, guid: 056a97a8d0955a52abf54be305602017, type: 2}
+  description: Spend total of [minAmount] on roulette.
+  floorIndex: 3
+  manualTicketReward: 13
+  conditions:
+  - rid: 7477605035387912197
+  - rid: 7477605035387912198
+  requireAllSimultaneously: 1
+  repeatable: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 7477605035387912197
+      type: {class: BetAmountConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 0
+        minBetMultiplier: 0.5
+        maxBetMultiplier: 0
+        checkTotalBet: 1
+    - rid: 7477605035387912198
+      type: {class: GameTypeConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        requiredGameType: 11

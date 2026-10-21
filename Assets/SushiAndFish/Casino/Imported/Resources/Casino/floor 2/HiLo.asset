@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b090dad82f55a8bb9f0ed9023631869, type: 3}
+  m_Name: HiLo
+  m_EditorClassIdentifier:
+  challengeID: 3
+  challengeName: Roll the Odds
+  linkedAchievement: {fileID: 11400000, guid: b8651234020b5684a663c160ada43b1f, type: 2}
+  description: Profit total of [minAmount] on Hi Lo
+  floorIndex: 1
+  manualTicketReward: 9
+  conditions:
+  - rid: 7477605029765709845
+  - rid: 7477605029765709844
+  requireAllSimultaneously: 1
+  repeatable: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 7477605029765709844
+      type: {class: ProfitConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 0
+        minProfitMultiplier: 0.5
+        checkTotalProfit: 1
+    - rid: 7477605029765709845
+      type: {class: GameTypeConditionData, ns:, asm: Assembly-CSharp}
+      data:
+        description:
+        useAsResultFilter: 1
+        requiredGameType: 4
