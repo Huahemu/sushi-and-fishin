@@ -26,7 +26,7 @@ namespace PaperPixelGames.Core.NetworkDevelopment
 		{
 			component = null;
 			manager = ((manager != null) ? manager : NetworkManager.Singleton);
-			if (manager == null || manager.SpawnManager == null || !reference.TryGet(out var networkObject, manager))
+			if (manager == null || !manager.IsListening || manager.ShutdownInProgress || manager.SpawnManager == null || manager.SpawnManager.SpawnedObjects == null || !reference.TryGet(out var networkObject, manager) || networkObject == null)
 			{
 				return false;
 			}

@@ -836,7 +836,8 @@ namespace PaperPixelGames.Core.Kitchen
 				ShowMachineToast("notification.fillet_machine.only_fish", "Only fish can be placed into the fillet machine.");
 				return;
 			}
-			if (held.NetworkObject == null || !held.NetworkObject.IsSpawned)
+			if(held is DeadFish collectionFish&&collectionFish.FishSO!=null&&collectionFish.FishSO.IngredientSO==null){ShowMachineToast("fishing.collection_only","这类钓获物只能收藏、展示或出售，不能切片。");return;}
+            if (held.NetworkObject == null || !held.NetworkObject.IsSpawned)
 			{
 				ShowMachineToast("notification.fillet_machine.fish_unavailable", "This fish cannot be loaded right now.");
 				return;
@@ -1123,7 +1124,7 @@ namespace PaperPixelGames.Core.Kitchen
 					ClientLoadFishRejectedRpc(clientId);
 					return;
 				}
-				if (!fishRef.TryGetComponent<DeadFish>(out var component) || component.NetworkObject == null || !component.NetworkObject.IsSpawned || component.FishSO == null || component.DeadGraphic == null)
+				if (!fishRef.TryGetComponent<DeadFish>(out var component) || component.NetworkObject == null || !component.NetworkObject.IsSpawned || component.FishSO == null || component.FishSO.IngredientSO == null || component.DeadGraphic == null)
 				{
 					UtilityMethods.Log("[FilletMachine] ServerLoadFishRpc rejected invalid fish.", LogType.Warning);
 					ClientLoadFishRejectedRpc(clientId);

@@ -496,6 +496,8 @@ namespace PaperPixelGames.Core.SaveSystem
 				UtilityMethods.Log("[SaveManager] SaveCurrentSlot failed. " + error, LogType.Error);
 				return false;
 			}
+			SushiAndFish.FishingIntegration.FishingMigration.Instance?.SaveWorld();
+			SushiAndFish.FishingIntegration.PlayerResumeController.SaveLocalNow();
 			bool num = _saveSlotRepository.SaveSlot(_currentSaveSlotIndex, data);
 			if (num && !_storage.IsCapturingDeferredWrites)
 			{
@@ -551,6 +553,7 @@ namespace PaperPixelGames.Core.SaveSystem
 			foreach (string item in hashSet)
 			{
 				_clientProfileRepository.Clear(item, num);
+				SushiAndFish.FishingIntegration.PlayerResumeController.InvalidateSlot(item, num);
 			}
 			_clientProfileRepository.ClearProfilesForSlot(num);
 			_saveSlotRepository.Clear(slotIndex);
@@ -605,6 +608,7 @@ namespace PaperPixelGames.Core.SaveSystem
 
 		public SaveResult SaveCurrentClientProfile()
 		{
+			SushiAndFish.FishingIntegration.PlayerResumeController.SaveLocalNow();
 			if (!TryResolveCurrentClientProfileContext(out var hostSteamId, out var slotId))
 			{
 				UtilityMethods.Log("[SaveManager] SaveCurrentClientProfile failed. Context could not be resolved." + $"\n   CurrentSlotIndex: {_currentSaveSlotIndex}" + "\n   CachedHostSteamID: " + _currentSaveSlotHostSteamID, LogType.Error);

@@ -6,6 +6,7 @@ using PaperPixelGames.Framework.Patterns;
 using PaperPixelGames.Framework.UI.Notify;
 using PaperPixelGames.Framework.Utility;
 using UnityEngine;
+using SushiAndFish.FishingIntegration;
 
 namespace PaperPixelGames.Core.Ocean
 {
@@ -46,6 +47,10 @@ namespace PaperPixelGames.Core.Ocean
 
 		private bool _isLocalPlayerInside;
 
+		// Keep physical overlap separate from the logical penalty. A player can
+		// walk out of an authorised island while remaining inside this collider.
+		private bool _isPenaltyActive;
+
 		private OffscreenIndicatorHandler _restaurantIndicatorHandler;
 
 		private OffscreenIndicatorHandler.OffscreenIndicatorHandle _restaurantIndicatorHandle;
@@ -70,13 +75,19 @@ namespace PaperPixelGames.Core.Ocean
 
 		private void Update()
 		{
-			if (_isLocalPlayerInside && !(_localPlayer == null) && !(_localPlayer.DivingEquipment == null))
+			if (!_isLocalPlayerInside) return;
+			if (_localPlayer == null)
+			{
+				ClearLocalPlayerState();
+				return;
+			}
+			if (_localPlayer.DivingEquipment != null)
 			{
 				if (_localPlayer.DivingEquipment.IsKnocked)
 				{
 					ClearLocalPlayerState();
 				}
-				else
+				else if (RefreshPenaltyState())
 				{
 					_localPlayer.DivingEquipment.TickOpenWaterPenalty(Time.deltaTime);
 				}
@@ -94,14 +105,40 @@ namespace PaperPixelGames.Core.Ocean
 			{
 				_localPlayer = player;
 				_isLocalPlayerInside = true;
+			}
+			RefreshPenaltyState();
+		}
+
+		private bool RefreshPenaltyState()
+		{
+			bool required = _localPlayer != null && !ArchipelagoTravelArea.AllowsCurrentWorld(_localPlayer.transform.position);
+			if (required == _isPenaltyActive) return required;
+			if (required)
+			{
+				_isPenaltyActive = true;
 				_localPlayer.DivingEquipment?.ResetOpenWaterPenalty();
 				Singleton<NotifyManager>.Instance?.ShowAlert(_alertHeader, _alertDescription, -1f, _alertPriority, autoClose: false);
 				ShowRestaurantIndicator();
-				if (_logStateChanges)
-				{
-					UtilityMethods.Log("[OpenWatersPenaltyTrigger] Local player entered open waters.");
-				}
+				if (_logStateChanges) UtilityMethods.Log("[OpenWatersPenaltyTrigger] Local player entered open waters.");
 			}
+			else
+			{
+				StopPenalty();
+			}
+			return required;
+		}
+
+		private void StopPenalty()
+		{
+			if (_isPenaltyActive)
+			{
+				_isPenaltyActive = false;
+				if (_localPlayer != null && _localPlayer.DivingEquipment != null)
+					_localPlayer.DivingEquipment.ResetOpenWaterPenalty();
+				// Do not dismiss another critical alert, such as pressure or low oxygen.
+				Singleton<NotifyManager>.Instance?.TryHideAlert(_alertHeader, _alertDescription);
+			}
+			HideRestaurantIndicator();
 		}
 
 		private void OnTriggerExit(Collider other)
@@ -181,14 +218,9 @@ namespace PaperPixelGames.Core.Ocean
 		private void ClearLocalPlayerState()
 		{
 			_localPlayerColliders.Clear();
-			if (_localPlayer != null)
-			{
-				_localPlayer.DivingEquipment?.ResetOpenWaterPenalty();
-			}
-			HideRestaurantIndicator();
+			StopPenalty();
 			_localPlayer = null;
 			_isLocalPlayerInside = false;
-			Singleton<NotifyManager>.Instance?.ForceHideAlert();
 			if (_logStateChanges)
 			{
 				UtilityMethods.Log("[OpenWatersPenaltyTrigger] Local player exited open waters.");

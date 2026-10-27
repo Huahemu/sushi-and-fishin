@@ -146,6 +146,7 @@ namespace PaperPixelGames.Wheel
 
 		private void OnOpenTools(InputActionPhase phase, bool pressed, bool isHold)
 		{
+            if(SushiAndFish.FishingIntegration.FishingMigration.ReloadTap(LocalPlayer,phase,isHold))return;
 			if (DisableToolWheel || LocalPlayer == null)
 			{
 				return;

@@ -73,6 +73,8 @@ namespace PaperPixelGames.Framework.States.MainMenu
 		[SerializeField]
 		private ToggleUGUI _reduceMotionToggle;
 
+		private SushiAndFish.FishingIntegration.TestingCheatSettings _testingCheats;
+
 		private Tween _scrollTween;
 
 		private LocalizationProvider _kamgamLocalizationProvider;
@@ -103,6 +105,9 @@ namespace PaperPixelGames.Framework.States.MainMenu
 			BindLanguageDropdown();
 			ConfigureComfortLabels();
 			InitializeReduceMotionPreset();
+			_testingCheats = GetComponent<SushiAndFish.FishingIntegration.TestingCheatSettings>();
+			if (_testingCheats == null) _testingCheats = gameObject.AddComponent<SushiAndFish.FishingIntegration.TestingCheatSettings>();
+			_testingCheats.Build(_gameplayContainer);
 			ReflowCategoryLayout();
 			if (_backButton != null)
 			{
@@ -149,6 +154,7 @@ namespace PaperPixelGames.Framework.States.MainMenu
 
 		protected override void OnShow()
 		{
+			_testingCheats?.Refresh();
 			RefreshLanguageDropdown();
 			RefreshKamgamLocalization();
 			RefreshComfortSettingLabels();
@@ -523,6 +529,7 @@ namespace PaperPixelGames.Framework.States.MainMenu
 
 		private void ReflowCategoryLayout()
 		{
+			_testingCheats?.RefreshLayout();
 			ReflowControlsLayout();
 			if (!(_gameplayContainer == null) && !(_comfortContainer == null) && !(_graphicsContainer == null) && !(_soundContainer == null) && !(_controlsContainer == null))
 			{

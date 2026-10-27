@@ -611,11 +611,17 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		public override bool DisableIf()
 		{
-			return !IsFishingActive;
+			return SushiAndFish.FishingIntegration.FishingMigration.Enabled||!IsFishingActive;
 		}
 
 		protected override void ApplyToolStatus(bool status)
 		{
+            if(SushiAndFish.FishingIntegration.FishingMigration.Enabled){
+                base.ApplyToolStatus(status);SetFishingRodEquippedAnimation(status);DisableHints();
+                if(_fpsGraphicParent)_fpsGraphicParent.gameObject.SetActive(false);if(_tpsGraphicParent)_tpsGraphicParent.gameObject.SetActive(false);
+                if(_fishingRodUI)_fishingRodUI.gameObject.SetActive(false);
+                SushiAndFish.FishingIntegration.FishingMigration.ToolStatus(_player,status);return;
+            }
 			base.ApplyToolStatus(status);
 			SetFishingRodEquippedAnimation(status);
 			if (!base.IsOwner)
@@ -795,6 +801,7 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		public override void Mouse1(InputActionPhase phase)
 		{
+            if(SushiAndFish.FishingIntegration.FishingMigration.ToolInput(_player,"left",phase))return;
 			if (!base.IsOwner || !base.ToolStatus)
 			{
 				return;
@@ -855,6 +862,7 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		public override void Mouse2(InputActionPhase phase)
 		{
+            if(SushiAndFish.FishingIntegration.FishingMigration.ToolInput(_player,"right",phase))return;
 			if (!base.IsOwner || !base.ToolStatus)
 			{
 				return;
@@ -890,6 +898,7 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		private void Update()
 		{
+            if(SushiAndFish.FishingIntegration.FishingMigration.Enabled)return;
 			TickServerFishing();
 			if (!base.IsOwner)
 			{

@@ -1432,6 +1432,9 @@ namespace PaperPixelGames.Core.Player
 
 		public Camera MainCamera => _viewModelCamera;
 
+        // World-space aiming and physical gameplay must not use the hand-only overlay camera.
+        public Camera GameplayCamera => _playerCamera;
+
 		public CinemachineBrain CinemachineBrain => _cinemachineBrain;
 
 		public LookAtConstraint LookAtConstraint => _lookAtConstraint;
@@ -1759,6 +1762,7 @@ namespace PaperPixelGames.Core.Player
 		public override void OnNetworkSpawn()
 		{
 			base.OnNetworkSpawn();
+			SushiAndFish.FishingIntegration.PlayerResumeController.Ensure(this);
 			_spawnGeneration++;
 			_waitingForBootstrapCoordinator = false;
 			StopCustomizationOperation();
@@ -2630,6 +2634,7 @@ namespace PaperPixelGames.Core.Player
 
 		public override void OnNetworkDespawn()
 		{
+			SushiAndFish.FishingIntegration.PlayerResumeController.EndLocalSession(this);
 			if (base.IsServer)
 			{
 				Surfboard.ReleasePlayer(this, SurfExitReason.Disconnect);
@@ -9313,6 +9318,7 @@ namespace PaperPixelGames.Core.Player
 			}
 		}
 
+        public bool TryEquipMigratedFishing(){if(!IsOwner||!_fishingRod||!_fishingRod.IsUnlocked||!CanStartControlAction(PlayerControlAction.ActivateTool))return false;if(ActiveTool==_fishingRod&&_fishingRod.ToolStatus)return true;ToggleFishingRod(true);return ActiveTool==_fishingRod&&_fishingRod.ToolStatus;}
 		private void ToggleFishingRod(bool forceActive = false)
 		{
 			if (HasHeldItemBlockingToolActivation(_fishingRod))
@@ -9968,6 +9974,7 @@ namespace PaperPixelGames.Core.Player
 
 		public void OnToolSelect(IWheelSlice data)
 		{
+            if(SushiAndFish.FishingIntegration.FishingMigration.OpenFishingEquipment(this,data)){LastToolAction=ToggleFishingRod;return;}
 			if (data == null || !(data is BaseToolData baseToolData) || IsUsingEmoteArea)
 			{
 				return;

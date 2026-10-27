@@ -1002,6 +1002,7 @@ namespace PaperPixelGames.Core.Interaction
 
 		private void OnInteract(InputActionPhase phase)
 		{
+            if(SushiAndFish.FishingIntegration.FishingMigration.Interact(Player,phase))return;
             if (SushiAndFish.Casino.ParkCasinoIntegration.TryConsumeInteraction(phase)) return;
 			if (Player != null && Player.HasSurfboard)
 			{

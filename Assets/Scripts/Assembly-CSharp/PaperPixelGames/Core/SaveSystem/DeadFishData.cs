@@ -8,6 +8,7 @@ namespace PaperPixelGames.Core.SaveSystem
 		public TransformData TransformData = new TransformData();
 
 		public string FishId;
+        public string FishingCaptureId;
 
 		public bool IsFishBookCatchRegistered;
 

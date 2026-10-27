@@ -49,7 +49,7 @@ namespace PaperPixelGames.Core.Tablet
 			}
 		}
 
-		public bool IsUnlocked => _currentEntry.IsUnlocked;
+		public bool IsUnlocked => SushiAndFish.FishingIntegration.FishingTablet.Acquired(_fishData,_currentEntry.IsUnlocked);
 
 		public void Initialize(FishBookApp app, FishSO fishData)
 		{
@@ -61,6 +61,7 @@ namespace PaperPixelGames.Core.Tablet
 			}
 			if (_fishIconImage != null)
 			{
+				_fishIconImage.material=null;_fishIconImage.useSpriteMesh=false;
 				_fishIconImage.sprite = ((_fishData != null) ? _fishData.Sprite : null);
 				_fishIconImage.color = _lockedIconColor;
 			}
@@ -109,6 +110,7 @@ namespace PaperPixelGames.Core.Tablet
 			_fishBookApp?.SelectFish(this);
 		}
 
+        private void Update(){if(SushiAndFish.FishingIntegration.FishingMigration.Enabled)SushiAndFish.FishingIntegration.FishingTablet.Paint(_fishData,_fishIconImage,_fishNameText,false,_lockedIconColor,_unlockedIconColor,_currentEntry.IsUnlocked);}
 		private void OnDestroy()
 		{
 			if (_detailsButton != null)

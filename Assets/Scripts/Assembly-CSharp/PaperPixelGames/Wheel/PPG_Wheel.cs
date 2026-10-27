@@ -84,6 +84,7 @@ namespace PaperPixelGames.Wheel
 			return false;
 		}
 
+        public void ClearRuntimePage(){foreach(var element in _elements.ToArray())if(element){if(Application.isPlaying)Destroy(element.gameObject);else DestroyImmediate(element.gameObject);}_elements.Clear();_runtimeElements.Clear();}
 		public void RegisterElement(PPG_WheelElement element)
 		{
 			if (!(element == null))

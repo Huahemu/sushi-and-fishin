@@ -66,7 +66,9 @@ namespace PaperPixelGames.Wheel
 				return;
 			}
 			RefreshContent();
-			base.gameObject.SetActive(value: false);
+            // An inactive element can receive Awake on its first ShowElement.
+            // Keep it visible when the wheel has already begun opening.
+            if(_wheel==null||!_wheel.WheelStatus)base.gameObject.SetActive(value: false);
 		}
 
 		private void OnEnable()

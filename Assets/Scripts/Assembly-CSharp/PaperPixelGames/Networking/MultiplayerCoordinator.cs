@@ -2662,6 +2662,7 @@ namespace PaperPixelGames.Networking
 			}
 			if (!_sessionReturnPrepared)
 			{
+				SushiAndFish.FishingIntegration.PlayerResumeController.EndLocalSession();
 				_sessionReturnPrepared = true;
 				_clientCancellationVersion++;
 				_intentionalNetworkShutdown = true;

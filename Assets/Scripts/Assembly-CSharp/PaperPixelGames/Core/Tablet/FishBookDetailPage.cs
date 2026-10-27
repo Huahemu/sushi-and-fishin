@@ -47,6 +47,7 @@ namespace PaperPixelGames.Core.Tablet
 		public void Render(FishBookEntry fishData, FishSO fishSO, float personalBestKg)
 		{
 			EnsureScoreboardBuilt();
+            if(_fishImage){_fishImage.material=null;_fishImage.useSpriteMesh=false;}
 			if (fishSO == null)
 			{
 				RenderEmpty();
@@ -59,6 +60,7 @@ namespace PaperPixelGames.Core.Tablet
 			{
 				RenderUnlocked(fishData, fishSO, personalBestKg);
 			}
+            if(SushiAndFish.FishingIntegration.FishingMigration.Enabled)SushiAndFish.FishingIntegration.FishingTablet.Detail(this,fishSO,_fishImage,_fishName,_totalAmount,_lockedFishColor,_unlockedFishColor,fishData.IsUnlocked);
 		}
 
 		private void RenderUnlocked(FishBookEntry fishData, FishSO fishSO, float personalBestKg)

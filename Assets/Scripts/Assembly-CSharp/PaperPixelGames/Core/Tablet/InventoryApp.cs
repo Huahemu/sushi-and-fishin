@@ -52,6 +52,7 @@ namespace PaperPixelGames.Core.Tablet
 		public override void Initialize()
 		{
 			base.Initialize();
+            SushiAndFish.FishingIntegration.FishingTablet.AttachInventory(this,_itemPrefab,_inventoryItemContainer);
 			if (!Application.isPlaying)
 			{
 				return;
@@ -252,6 +253,7 @@ namespace PaperPixelGames.Core.Tablet
 
 		public void SetCategory(string category)
 		{
+            GetComponent<SushiAndFish.FishingIntegration.FishingWarehousePage>()?.Show(false);
 			_currentCategory = category ?? string.Empty;
 			RefreshCategoryButtons();
 			RefreshEntryVisibility();

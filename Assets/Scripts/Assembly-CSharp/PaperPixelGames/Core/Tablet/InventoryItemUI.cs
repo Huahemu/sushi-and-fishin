@@ -80,10 +80,13 @@ namespace PaperPixelGames.Core.Tablet
 				_itemIconImage.sprite = ((item != null) ? item.Sprite : null);
 				_itemIconImage.enabled = item != null && item.Sprite != null;
 			}
-			_amount = Mathf.Max(0, amount);
+			SushiAndFish.FishingIntegration.FishingTablet.PaintInventory(item,_itemIconImage);
+            _amount = Mathf.Max(0, amount);
 			RefreshLocalizedText();
 		}
 
+        public void SetLongAmount(long amount){if(_amountText)_amountText.text=amount.ToString("N0")+" 条";}
+        public void PrepareWarehouseRow(){if(_goodStatusRoot)_goodStatusRoot.SetActive(false);if(_warningStatusRoot)_warningStatusRoot.SetActive(false);if(_amountText){_amountText.rectTransform.sizeDelta=new Vector2(95,16);_amountText.rectTransform.anchoredPosition=new Vector2(20,0);_amountText.enableAutoSizing=true;_amountText.fontSizeMin=3.5f;_amountText.fontSizeMax=6;_amountText.textWrappingMode=TextWrappingModes.NoWrap;}}
 		public void UpdateAmount(int newAmount)
 		{
 			_amount = Mathf.Max(0, newAmount);

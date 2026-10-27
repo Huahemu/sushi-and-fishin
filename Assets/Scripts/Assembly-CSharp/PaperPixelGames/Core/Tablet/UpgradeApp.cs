@@ -176,6 +176,12 @@ namespace PaperPixelGames.Core.Tablet
 			}
 		}
 
+        public SushiAndFish.FishingIntegration.FishingUpgradeView CreateFishingUpgradeView()=>new SushiAndFish.FishingIntegration.FishingUpgradeView{
+            content=_contentRoot,diving=_divingSuitButton,harpoon=_harpoonButton,scooter=_seaScooterButton,rod=_fishingRodButton,action=_toolUpgradeButton,
+            choices=new[]{_level1Button,_level2Button,_level3Button,_level4Button,_level5Button},preview=_toolPreviewImage,moneyIcon=_upgradeCostMoneyIcon,scrapIcon=_upgradeCostScrapIcon,
+            title=_toolName,actionLabel=_toolUpgradeButtonText,price=_toolUpgradePrice,scrapPrice=_toolUpgradeScrapPrice,cost=_upgradeCostText,
+            specs=new TMP_Text[]{_firstSpecsLine,_secondSpecsLine,_thirdSpecsLine},normal=_normalColor,insufficient=_insufficientColor};
+
 		public override void Initialize()
 		{
 			base.Initialize();
@@ -206,6 +212,7 @@ namespace PaperPixelGames.Core.Tablet
 			CacheButtonGroups();
 			BindEvents();
 			RefreshApp();
+            SushiAndFish.FishingIntegration.FishingWeaponShop.Attach(this,_contentRoot);
 		}
 
 		private void OnDestroy()
@@ -222,6 +229,7 @@ namespace PaperPixelGames.Core.Tablet
 			BindEconomyEvents();
 			BindProgressionEvents();
 			RefreshApp();
+            SushiAndFish.FishingIntegration.FishingWeaponShop.Attach(this,_contentRoot);
 		}
 
 		private void CacheReferences()
@@ -556,6 +564,8 @@ namespace PaperPixelGames.Core.Tablet
 
 		private void SelectTool(ToolType toolType)
 		{
+            GetComponent<SushiAndFish.FishingIntegration.FishingWeaponShop>()?.Select(false);
+            RefreshLevelButtonLabels();
 			_currentToolType = toolType;
 			int equippedLevel = GetEquippedLevel(toolType);
 			int ownedLevel = GetOwnedLevel(toolType);
@@ -566,12 +576,14 @@ namespace PaperPixelGames.Core.Tablet
 
 		private void OnLevelButtonClicked(int displayLevel)
 		{
+            if(GetComponent<SushiAndFish.FishingIntegration.FishingWeaponShop>()?.TrySelectWeapon(displayLevel-1)==true)return;
 			_selectedLevelIndex = ClampLevelIndex(displayLevel - 1);
 			RefreshSelectedToolUI();
 		}
 
 		private void RefreshSelectedToolUI()
 		{
+            if(GetComponent<SushiAndFish.FishingIntegration.FishingWeaponShop>()?.TryRefresh()==true)return;
 			if (_currentToolType == ToolType.Empty)
 			{
 				ClearDetails();
@@ -889,6 +901,7 @@ namespace PaperPixelGames.Core.Tablet
 
 		private void OnToolUpgradeButtonClick()
 		{
+            if(GetComponent<SushiAndFish.FishingIntegration.FishingWeaponShop>()?.TryBuySelected()==true)return;
 			if (_currentToolType != ToolType.Empty)
 			{
 				switch (_currentButtonMode)

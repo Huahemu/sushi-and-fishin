@@ -80,7 +80,10 @@ namespace PaperPixelGames.Core.Localization
 			{
 				return fallback ?? string.Empty;
 			}
-			string localizedString = LocalizationSettings.StringDatabase.GetLocalizedString(tableName, key, null, FallbackBehavior.UseProjectSettings);
+			// A missing entry can return Unity's nonempty "No translation found"
+			// diagnostic. Resolve the entry first so the supplied name remains the
+			// fallback when recovered runtime bundles predate newly authored items.
+			string localizedString = GetStringOrFallback(tableName, key, fallback);
 			if (!string.IsNullOrWhiteSpace(localizedString))
 			{
 				return localizedString;

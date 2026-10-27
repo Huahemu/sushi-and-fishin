@@ -24,6 +24,7 @@ namespace PaperPixelGames.Core.Player.QuickSlot
 		{
 			HeldItem = item;
 			Set(item.QuickSlotDisplayName, item.QuickSlotDisplaySprite);
+            SushiAndFish.FishingIntegration.FishingTablet.PaintHeld(item,_iconImage);
 			TrayQuickSlotIconLayers trayQuickSlotIconLayers = _iconImage.GetComponent<TrayQuickSlotIconLayers>();
 			if (item is Tray tray)
 			{
@@ -42,7 +43,7 @@ namespace PaperPixelGames.Core.Player.QuickSlot
 		public void Set(string name, Sprite sprite)
 		{
 			_quickSlotHandler.UpdateInfoText(name);
-			_iconImage.sprite = sprite;
+			_iconImage.sprite = sprite;_iconImage.material=null;_iconImage.useSpriteMesh=false;
 			_visualParent.SetActive(value: true);
 		}
 

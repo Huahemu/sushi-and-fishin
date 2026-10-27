@@ -25,6 +25,7 @@ namespace PaperPixelGames.Core.Ocean
 {
 	public class DeadFish : BaseHoldable, ISaveable<DeadFishData>
 	{
+        [HideInInspector] public string FishingCaptureId;
 		private const float MIN_COLLIDER_DIMENSION = 0.01f;
 
 		private static readonly HashSet<string> _reportedColliderBoundsFallbackFishIds = new HashSet<string>();
@@ -319,6 +320,7 @@ namespace PaperPixelGames.Core.Ocean
 				_lastHolderClientId = interactor.OwnerClientId;
 			}
 			ServerRegisterInventoryStock();
+			SushiAndFish.FishingIntegration.FishingMigration.NativePicked(this,interactor?.Player);
 			ServerTryRegisterFishBookPickup(interactor);
 		}
 
@@ -645,18 +647,20 @@ namespace PaperPixelGames.Core.Ocean
 				FishId = FishSO.Id,
 				TransformData = GetTransformData(),
 				FishWeight = Weight.Value,
-				IsFishBookCatchRegistered = IsFishBookCatchRegistered.Value
+				IsFishBookCatchRegistered = IsFishBookCatchRegistered.Value,
+                FishingCaptureId = FishingCaptureId
 			};
 		}
 
 		public override string SaveCustomData()
 		{
-			return Weight.Value.ToString(CultureInfo.InvariantCulture);
+			return string.IsNullOrEmpty(FishingCaptureId)?Weight.Value.ToString(CultureInfo.InvariantCulture):"HTF1|"+Weight.Value.ToString("R",CultureInfo.InvariantCulture)+"|"+FishingCaptureId+"|"+(IsFishBookCatchRegistered.Value?"1":"0");
 		}
 
 		public override void LoadCustomData(FixedString128Bytes data)
 		{
 			string text = data.ToString();
+            if(text.StartsWith("HTF1|",StringComparison.Ordinal)){var fields=text.Split('|');if(fields.Length==4&&float.TryParse(fields[1],NumberStyles.Float,CultureInfo.InvariantCulture,out var weight)){Weight.Value=weight;FishingCaptureId=fields[2];IsFishBookCatchRegistered.Value=fields[3]=="1";}return;}
 			if (!string.IsNullOrWhiteSpace(text) && float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
 			{
 				Weight.Value = result;
@@ -668,6 +672,7 @@ namespace PaperPixelGames.Core.Ocean
 			Weight.Value = data.FishWeight;
 			FishId.Value = data.FishId;
 			IsFishBookCatchRegistered.Value = data.IsFishBookCatchRegistered;
+            FishingCaptureId=data.FishingCaptureId;
 			ClientSpawnGraphicsRpc(data.FishId);
 		}
 

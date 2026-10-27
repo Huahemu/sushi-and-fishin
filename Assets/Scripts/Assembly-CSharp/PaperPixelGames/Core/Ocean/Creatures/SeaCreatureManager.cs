@@ -1564,7 +1564,7 @@ namespace PaperPixelGames.Core.Ocean.Creatures
 				Log("GetFishById failed. ItemDatabaseSO or CreatureItems is null.", LogType.Warning);
 				return null;
 			}
-			return _itemDatabaseSO.CreatureItems.OfType<FishSO>().FirstOrDefault((FishSO item) => item != null && item.Id == id);
+			return _itemDatabaseSO.CreatureItems.OfType<FishSO>().FirstOrDefault((FishSO item) => item != null && item.Id == id) ?? (_itemDatabaseSO.FindById(id) as FishSO);
 		}
 
 		public void ApplyDeadShaderState(GameObject graphic)
@@ -1625,7 +1625,7 @@ namespace PaperPixelGames.Core.Ocean.Creatures
 				Log("TryGetCreature failed. ItemDatabaseSO or CreatureItems is null.", LogType.Warning);
 				return false;
 			}
-			creatureSO = _itemDatabaseSO.CreatureItems.OfType<CreatureSO>().FirstOrDefault((CreatureSO item) => item != null && item.Id == creatureId);
+			creatureSO = _itemDatabaseSO.CreatureItems.OfType<CreatureSO>().FirstOrDefault((CreatureSO item) => item != null && item.Id == creatureId) ?? (_itemDatabaseSO.FindById(creatureId) as CreatureSO);
 			return creatureSO != null;
 		}
 
