@@ -37,12 +37,13 @@ namespace SushiAndFish.FishingIntegration {
         static void Boot(){if(Instance)return;var config=MigrationConfig.Load();if(!config||!config.enabled)return;var go=new GameObject("Sushi fishing integration");DontDestroyOnLoad(go);go.AddComponent<FishingMigration>().Config=config;}
         void Awake(){Instance=this;}
         void OnApplicationQuit(){SaveWorld();}
-        void OnDestroy(){SaveWorld();ClearWalkCollisions();UnbindWire();if(Instance==this)Instance=null;}
+        void OnDestroy(){SaveWorld();ClearNativeDeaths();ClearWalkCollisions();UnbindWire();if(Instance==this)Instance=null;}
         void Update(){
             var current=NetworkManager.Singleton;
             if(!current||!current.IsListening){if(network){SaveWorld();ResetWorld();}return;}
             if(network!=current){ResetWorld();network=current;BindWire();}
             if(Time.unscaledTime>=scanAt){scanAt=Time.unscaledTime+.5f;DiscoverPlayers();}
+            ApplyPendingNativeDeath();
             foreach(var actor in actors.Values)if(actor.player)actor.Tick();
             if(Server){
                 EnsureSlot();TickArchipelago();TickEvents();
@@ -62,6 +63,7 @@ namespace SushiAndFish.FishingIntegration {
             foreach(var id in actors.Keys.ToArray())if(!actors[id].player){SaveWorld();actors[id].Dispose();actors.Remove(id);}
         }
         void ResetWorld(){
+            ClearNativeDeaths();
             var nativeSelection=GetComponent<NativeSpearfishingAccess>();if(nativeSelection)nativeSelection.Cancel();
             ClearWalkCollisions();
             ClearArchipelago();
@@ -93,6 +95,8 @@ namespace SushiAndFish.FishingIntegration {
             actor.Send(action,phase==InputActionPhase.Canceled?0:1);return true;
         }
         public static bool Interact(PPG_Player player,InputActionPhase phase){
+            // Let the original interactor handle its knockout rescue/give-up action.
+            if(player&&player.DivingEquipment&&player.DivingEquipment.IsKnocked)return false;
             if(Enabled&&Instance.Archipelago&&Instance.Archipelago.Interact(player,phase))return true;
             if(!Enabled||!player||!player.IsOwner||phase!=InputActionPhase.Started)return false;
             if(player.ActiveTool&&player.ActiveTool.CapturesInteractInput)return false;

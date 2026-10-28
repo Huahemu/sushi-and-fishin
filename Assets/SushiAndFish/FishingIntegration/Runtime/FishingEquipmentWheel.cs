@@ -35,6 +35,7 @@ namespace SushiAndFish.FishingIntegration {
    if(actor.player)actor.world.Notify(actor.player.OwnerClientId,"暂时无法切换装备 · 请先放下手中物品或结束当前交互");choosing=null;
   }
   void LateUpdate(){if(manager&&page&&manager.IsWheelOpen(page)&&shownMask!=actor.world.SaveData.ownedWeapons)Rebuild();}
+  public void CancelPendingSelection(){StopAllCoroutines();opening=choosing=null;choiceQueued=true;if(manager&&page&&manager.IsWheelOpen(page))manager.DeactiveWheel(false);}
   void OnDestroy(){if(manager&&page&&manager.IsWheelOpen(page))manager.DeactiveWheel(false);if(page)Destroy(page.gameObject);foreach(var slice in slices)if(slice)Destroy(slice);}
  }
 }

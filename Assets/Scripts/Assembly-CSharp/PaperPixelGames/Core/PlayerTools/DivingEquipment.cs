@@ -241,6 +241,11 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		private bool _finishKnocked;
 
+		// Combat can knock out an unequipped player on dry land. Recovery still uses the native flow.
+		private bool _combatKnock;
+
+		public event Action KnockRecoveryCompleted;
+
 		private bool _ownsKnockMovementPause;
 
 		private float _knockTimeLeft;
@@ -480,13 +485,13 @@ namespace PaperPixelGames.Core.PlayerTools
 				_player.FirstPersonCharacterInput.UnderwaterArea.waterlineOffset = (flag ? _underwaterAreaBelowOffset : _underwaterAreaDefaultOffset);
 			}
 			UpdateFlashlight();
+			if (_isKnocked && (base.ToolStatus || _combatKnock))
+			{
+				UpdateKnock();
+				return;
+			}
 			if (base.ToolStatus)
 			{
-				if (_isKnocked)
-				{
-					UpdateKnock();
-					return;
-				}
 				UpdateDepth();
 				UpdateOxygen();
 				UpdateLocomotionFx();
@@ -1491,6 +1496,31 @@ namespace PaperPixelGames.Core.PlayerTools
 			}
 		}
 
+		public bool BeginCombatKnock()
+		{
+			if (!base.IsOwner || _player == null || !_player.IsLocalGameplayPreparationReady || _finishKnocked)
+			{
+				return false;
+			}
+			if (_isKnocked)
+			{
+				return true;
+			}
+			_combatKnock = true;
+			_currentOxygen = 0f;
+			_divingEquipmentUI.SetOxygenLevel(0f);
+			_player.Sway.PlayDamageHitFeedback();
+			_player.DamageFeedback();
+			OnOxygenDepleted();
+			return _isKnocked;
+		}
+
+		private Volume GetKnockVolume()
+		{
+			var volume = GetDominantUnderwaterVolume();
+			return _combatKnock ? Singleton<GlobalVolumeManager>.Instance.GetCombatKnockVolume(volume) : volume;
+		}
+
 		private void OnOxygenDepleted()
 		{
 			if (!_isKnocked)
@@ -1508,7 +1538,7 @@ namespace PaperPixelGames.Core.PlayerTools
 				_isAccelerating = false;
 				_isKnocked = true;
 				AcquireKnockMovementPause();
-				Singleton<GlobalVolumeManager>.Instance.EnterDivingKnock(GetDominantUnderwaterVolume());
+				Singleton<GlobalVolumeManager>.Instance.EnterDivingKnock(GetKnockVolume());
 				_player.PauseConstraints();
 				_player.SetActionCamera(status: true);
 				_player.SetSharkDragAnimator(isDragging: false);
@@ -1675,7 +1705,7 @@ namespace PaperPixelGames.Core.PlayerTools
 			{
 				return;
 			}
-			if (!_isUnderwater)
+			if (!_isUnderwater && !_combatKnock)
 			{
 				CancelKnockAndRecover();
 				return;
@@ -1693,7 +1723,7 @@ namespace PaperPixelGames.Core.PlayerTools
 			float num2 = Mathf.Max(1f, _knockDurationSeconds);
 			float num3 = _knockTimeLeft / num2;
 			_divingEquipmentUI.UpdateKnock(num3, _isAccelerating, friendMetersOrNull);
-			Singleton<GlobalVolumeManager>.Instance.TickDivingKnockGiveUp(GetDominantUnderwaterVolume(), num3);
+			Singleton<GlobalVolumeManager>.Instance.TickDivingKnockGiveUp(GetKnockVolume(), num3);
 			float drownIntensity = 1f - num3;
 			Singleton<OceanFXManager>.Instance.SetDrownIntensity(drownIntensity);
 			_player.EndEmote();
@@ -1770,7 +1800,9 @@ namespace PaperPixelGames.Core.PlayerTools
 				Singleton<GlobalVolumeManager>.Instance.ExitDivingKnock();
 				_sillyPufferManager.ResetPuffers();
 				_finishKnocked = false;
+				_combatKnock = false;
 				ServerRecordDailyDrownRpc();
+				KnockRecoveryCompleted?.Invoke();
 			});
 		}
 
@@ -1828,6 +1860,8 @@ namespace PaperPixelGames.Core.PlayerTools
 				_currentOxygen = Mathf.Max(_currentOxygen, _maxOxygen * Mathf.Clamp01(refillRatio));
 				_divingEquipmentUI.SetOxygenLevel(_currentOxygen / _maxOxygen);
 				Singleton<GlobalVolumeManager>.Instance.ExitDivingKnock();
+				_combatKnock = false;
+				KnockRecoveryCompleted?.Invoke();
 			}
 		}
 

@@ -19,7 +19,7 @@ namespace SushiAndFish.FishingIntegration {
             eventPanel=Panel(canvas.transform,new Vector2(.5f,1),new Vector2(0,-254),new Vector2(530,58));eventText=Label(eventPanel,new Vector2(.5f,.5f),Vector2.zero,new Vector2(490,48),18);
             nativeHints=root.AddComponent<FishingNativeHints>();nativeHints.Build(actor.world.Config);
         }
-        void Update(){if(actor==null||!actor.player||!canvas)return;bool blocked=actor.player.IsTabletActive;canvas.enabled=!blocked;var world=actor.world;
+        void Update(){if(actor==null||!actor.player||!canvas)return;bool blocked=actor.player.IsTabletActive||actor.IsDefeated;canvas.enabled=!blocked;if(blocked){boatCompass.Render(null,actor.world.Config,false,null);return;}var world=actor.world;
             bool nativeHarpoon=actor.player.Harpoon&&actor.player.Harpoon.ToolStatus;
             FishingSnapshot fish=null;
             if(actor.module&&actor.module.DisplayCatch){var identity=actor.module.DisplayCatch.GetComponent<MigratedCatchIdentity>();if(identity)focused=identity.token;}

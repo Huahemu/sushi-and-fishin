@@ -14,6 +14,10 @@ namespace PaperPixelGames.Core.Managers
 
 		private Volume _activeVolume;
 
+		private Volume _combatKnockVolume;
+
+		private VolumeProfile _combatKnockProfile;
+
 		private Vignette _vignette;
 
 		private Color _defaultColor;
@@ -85,6 +89,41 @@ namespace PaperPixelGames.Core.Managers
 			base.Awake();
 		}
 
+		// Reuse the native knockout vignette on shore without enabling underwater colour/blur overrides.
+		public Volume GetCombatKnockVolume(Volume source)
+		{
+			if (_combatKnockVolume == null && source != null && source.profile != null && source.profile.TryGet<Vignette>(out var vignette))
+			{
+				var root = new GameObject("Native combat knockout effects");
+				root.transform.SetParent(transform, false);
+				root.layer = source.gameObject.layer;
+				_combatKnockVolume = root.AddComponent<Volume>();
+				_combatKnockVolume.isGlobal = true;
+				_combatKnockVolume.priority = Mathf.Max(100f, source.priority + 1f);
+				_combatKnockProfile = ScriptableObject.CreateInstance<VolumeProfile>();
+				_combatKnockProfile.components.Add(UnityEngine.Object.Instantiate(vignette));
+				_combatKnockVolume.sharedProfile = _combatKnockProfile;
+			}
+			if (_combatKnockVolume != null)
+			{
+				_combatKnockVolume.weight = 1f;
+				return _combatKnockVolume;
+			}
+			return source;
+		}
+
+		private void DestroyCombatKnockVolume()
+		{
+			if (_combatKnockVolume != null) UnityEngine.Object.Destroy(_combatKnockVolume.gameObject);
+			if (_combatKnockProfile != null)
+			{
+				foreach (var component in _combatKnockProfile.components) UnityEngine.Object.Destroy(component);
+				UnityEngine.Object.Destroy(_combatKnockProfile);
+			}
+			_combatKnockVolume = null;
+			_combatKnockProfile = null;
+		}
+
 		private bool SetActiveVolume(Volume volume)
 		{
 			if (_activeVolume == volume)
@@ -93,6 +132,7 @@ namespace PaperPixelGames.Core.Managers
 			}
 			KillAllTweens();
 			RestoreActiveVignetteImmediate();
+			if (_combatKnockVolume != null && volume != _combatKnockVolume) _combatKnockVolume.weight = 0f;
 			_activeVolume = null;
 			_vignette = null;
 			if (volume == null)
@@ -139,12 +179,14 @@ namespace PaperPixelGames.Core.Managers
 			_activeVolume = null;
 			_vignette = null;
 			_divingKnockActive = false;
+			DestroyCombatKnockVolume();
 		}
 
 		private void OnDestroy()
 		{
 			KillAllTweens();
 			ResetVignetteToDefaultsImmediate();
+			DestroyCombatKnockVolume();
 		}
 
 		public void KillAllTweens()
@@ -252,7 +294,10 @@ namespace PaperPixelGames.Core.Managers
 						_vignette.smoothness.value = v;
 					}, _defaultSmoothness, _exitKnockTween))
 					.SetUpdate(isIndependentUpdate: true)
-					.SetEase(_exitEase);
+					.SetEase(_exitEase).OnComplete(() =>
+					{
+						if (_combatKnockVolume != null) _combatKnockVolume.weight = 0f;
+					});
 			}
 		}
 

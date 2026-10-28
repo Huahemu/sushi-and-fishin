@@ -32,7 +32,7 @@ namespace SushiAndFish.FishingIntegration {
         internal bool HandleFishPlayerContact(FishingCatch fish,Collider collider){
             var player=collider.GetComponentInParent<PPG_Player>();if(!player)return false;
             if(collider.isTrigger||collider.GetComponent<SDQQ1234.BoidsCollider>())return true;
-            if(!Server||!fish.IsAttackingPlayer||fish.IsDead||!fish.definition.ShoreAttackEligible||!actors.TryGetValue(player.OwnerClientId,out var victim)||!victim.module)return true;
+            if(!Server||!fish.IsAttackingPlayer||fish.IsDead||!fish.definition.ShoreAttackEligible||!actors.TryGetValue(player.OwnerClientId,out var victim)||!victim.module||victim.IsDefeated)return true;
             var identity=fish.GetComponent<MigratedCatchIdentity>();string key=(identity?identity.token:fish.GetInstanceID().ToString())+"_"+player.OwnerClientId;
             if(nextFishContact.TryGetValue(key,out var time)&&Time.time<time)return true;
             nextFishContact[key]=Time.time+fish.definition.shore.contactCooldown;victim.module.vitals.Hit(fish.definition.shore.attackDamage,fish.definition.displayName);return true;

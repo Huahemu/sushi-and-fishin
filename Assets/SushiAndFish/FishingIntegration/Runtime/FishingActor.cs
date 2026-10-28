@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace SushiAndFish.FishingIntegration {
-    public sealed class FishingActor {
+    public sealed partial class FishingActor {
         internal readonly FishingMigration world;
         public readonly PPG_Player player;
         public FishingModule module;
@@ -19,7 +19,7 @@ namespace SushiAndFish.FishingIntegration {
         public bool equipped;
         FishingEquipmentWheel equipmentWheel;
         public bool inputActive=true;bool lastAllowed=true;
-        public bool ControlsAllowed=>player&&player.IsLocalGameplayPreparationReady&&!player.IsTabletActive&&player.CanStartControlAction(PlayerControlAction.OpenToolWheel);
+        public bool ControlsAllowed=>player&&!IsDefeated&&player.IsLocalGameplayPreparationReady&&!player.IsTabletActive&&player.CanStartControlAction(PlayerControlAction.OpenToolWheel);
         public string message;public float messageUntil;
         public Camera Camera=>player&&player.IsOwner?player.GameplayCamera:virtualCamera;
         Camera virtualCamera;
@@ -27,7 +27,7 @@ namespace SushiAndFish.FishingIntegration {
         LineRenderer replicaLine;
         bool replicaReloading;
         Vector3 aimPosition,aimForward;
-        float nextPose,recoverAt;
+        float nextPose;
         bool left,previousLeft,right,previousRight;
         public FishingActor(FishingMigration service,PPG_Player actor){world=service;player=actor;if(world.Server)CreateServerModule();}
         void CreateServerModule(){
@@ -52,10 +52,10 @@ namespace SushiAndFish.FishingIntegration {
             module.combat.IgnoreCollider=c=>c.GetComponentInParent<PPG_Player>()!=null;module.combat.AffectOtherBodies=false;
             if(player.IsOwner){module.ToolToWorld=ToolWorldPoint;module.WorldToTool=WorldToolPoint;module.combat.ProjectileOrigin=ToolWorldPoint;}
             module.TryPlayerContact=world.HandleFishPlayerContact;world.BindShotEvents(this);
-            module.vitals.Died+=()=>{equipped=false;left=previousLeft=right=previousRight=false;module.SetReeling(0);ReleaseTools();recoverAt=Time.time+3;world.Notify(player.OwnerClientId,"被鱼击倒 · 3 秒后可继续使用装备");if(player.IsOwner)player.TryDisableActiveToolForModeChange();};
+            module.vitals.Died+=BeginNativeDeath;
             aimPosition=player.transform.position+Vector3.up*1.6f;aimForward=player.transform.forward;
         }
-        public void SetEquipped(bool active){active=active&&FishingMigration.UsesMigratedFishing(player);equipped=active;if(!active)pendingEquipment=int.MinValue;if(player.IsOwner)Send(active?"equip":"stow",active?equipment:0);if(!active&&module){module.SetReeling(0);module.Abort();ReleaseTools();}}
+        public void SetEquipped(bool active){active=active&&!IsDefeated&&FishingMigration.UsesMigratedFishing(player);equipped=active;if(!active)pendingEquipment=int.MinValue;if(player.IsOwner)Send(active?"equip":"stow",active?equipment:0);if(!active&&module){module.SetReeling(0);module.Abort();ReleaseTools();}}
         public void Send(string action,float value,string target=null){world.SendCommand(this,action,value,target);}
         public void OpenEquipmentPage(){
             if(!equipmentWheel){var candidate=world.gameObject.AddComponent<FishingEquipmentWheel>();if(!candidate.Bind(this)){UnityEngine.Object.Destroy(candidate);world.Notify(player.OwnerClientId,"装备界面尚未准备完成");return;}equipmentWheel=candidate;}
@@ -67,9 +67,9 @@ namespace SushiAndFish.FishingIntegration {
         }
         static bool Finite(Vector3 v)=>float.IsFinite(v.x)&&float.IsFinite(v.y)&&float.IsFinite(v.z);
         public void Tick(){
+            TickNativeDeath();
             if(world.Server&&module){
                 if(module.waterSurface)module.waterSurface.position=Vector3.up*world.SeaHeight;
-                if(module.vitals.Down&&Time.time>=recoverAt)module.vitals.Restore();
                 if(!player.IsOwner)virtualCamera.transform.SetPositionAndRotation(aimPosition,Quaternion.LookRotation(aimForward));RefreshGrips();
                 if(equipped&&pendingEquipment!=int.MinValue&&module.rig.Items.Count>=6){int requested=pendingEquipment;pendingEquipment=int.MinValue;Equip(requested);}
                 if(equipped&&module.rig.Items.Count>=6&&module.rig.ActiveHand.Held==null)Equip(equipment);
@@ -89,10 +89,12 @@ namespace SushiAndFish.FishingIntegration {
         public void Command(string action,float value,string target){
             if(!world.Server||!module)return;
             if(!float.IsFinite(value))return;
+            if(IsDefeated&&action!="control"&&action!="stow"&&action!="native-recovered")return;
             if((action=="equip"||action=="weapon")&&(!FishingMigration.UsesMigratedFishing(player)||!player.ToolsData.FishingRodUnlocked||module.vitals.Down))return;
             if((!inputActive||!FishingMigration.UsesMigratedFishing(player))&&(action=="left"||action=="right"||action=="reload"||action=="bait"))return;
             if((action=="equip"||action=="weapon")&&value>=0&&!world.OwnsWeapon((int)value)){world.Notify(player.OwnerClientId,"先在平板 · 升级 · 枪械中购买这把枪");return;}
             switch(action){
+                case "native-recovered":CompleteNativeDeath(target);break;
                 case "native-harpoon":NativeSpearfishingAccess.UnlockOnServer(this);break;
                 case "buy-weapon":world.BuyWeapon(this,(int)value);break;
                 case "control":inputActive=value>.5f;if(!inputActive){left=previousLeft=right=previousRight=false;module.SetReeling(0);if(module.State==FishingState.Charging)module.Abort();if(equipment>=0)module.combat.guns[equipment].SetAim(false);}break;
@@ -153,6 +155,6 @@ namespace SushiAndFish.FishingIntegration {
             else if(player.IsOwner&&visualRoot&&Camera){if(replicaFingers==null)replicaFingers=FishingGripPose.AuthoredFingers(visualRoot.transform);var rotation=world.ActorSnapshots.TryGetValue(player.OwnerClientId,out var state)&&equipment<0?state.rodRotation:Quaternion.identity;var view=player.MainCamera?player.MainCamera:Camera;PoseHeldTool(visualRoot.transform,null,replicaFingers,rotation,view.transform.TransformPoint(GripLocal(1)));}
         }
         public void PlayShot(){if(!visualRoot)return;var gun=visualRoot.GetComponent<FishWeapon>();if(gun&&gun.animationPlayer&&gun.animationPlayer["Fire"]!=null)gun.animationPlayer.Play("Fire");}
-        public void Dispose(){if(equipmentWheel)UnityEngine.Object.Destroy(equipmentWheel);if(module)module.Abort();if(root)UnityEngine.Object.Destroy(root);if(rigRoot)UnityEngine.Object.Destroy(rigRoot);if(visualRoot)UnityEngine.Object.Destroy(visualRoot);if(replicaLine)UnityEngine.Object.Destroy(replicaLine.gameObject);}
+        public void Dispose(){ClearNativeDeath();if(equipmentWheel)UnityEngine.Object.Destroy(equipmentWheel);if(module)module.Abort();if(root)UnityEngine.Object.Destroy(root);if(rigRoot)UnityEngine.Object.Destroy(rigRoot);if(visualRoot)UnityEngine.Object.Destroy(visualRoot);if(replicaLine)UnityEngine.Object.Destroy(replicaLine.gameObject);}
     }
 }
