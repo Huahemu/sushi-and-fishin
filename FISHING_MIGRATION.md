@@ -378,3 +378,13 @@ Unity6000.3.6f1编译、820项料理数据/原生纯配方解析/出售/本地�
 
 停止Play，等待编译后重新进入存档并打开图鉴、菜单或厨台配方书。
 独立备份与回退：D:/UnityProjects/_CodexBackups/sushi-fishing-namefix-20261027/README.md。完整移植回退已同步；若按步骤回退上一轮料理功能，应先回退本轮补丁。
+
+## 小岛越界后处理压暗修复（2026-10-28）
+
+原生Edge_1区域在物理上覆盖小岛2。上一轮已豁免岛屿与航线的越界警报/额外扣氧，但其独立URP局部Volume仍自动混合UnderwaterEdge：曝光-0.95、暗角0.433，另有偏暗滤色和颗粒，造成中午上岛仍发黑。
+
+现在OpenWatersPenaltyTrigger在LateUpdate按本地已准备角色的实际GameplayCamera位置查询既有ArchipelagoTravelArea，在认可的小岛/航线内暂时将该触发器附带的局部边界Volume权重设为0，移出区域后恢复进入前权重。它不依赖物理进入/退出回调，因此读档、传送及Volume混合边缘也一致。禁用/重载时恢复权重，且不会覆盖全局Volume。原边界碰撞体、Volume组件、sharedProfile资产保持，深海压力/氧气、溺水、天气/昼夜等其他效果保持原流程。
+
+非Play模式按真实Edge_1变换/碰撞盒和原UnderwaterEdge配置进行URP VolumeManager静态混合检查，实际复现岛2曝光-0.95及暗角0.433，授权区移除错误贡献后回到管线基线。19项后处理检查、33项既有安全区域检查和510项资产检查通过；编译通过，没有进入Play、运行角色/触发器生命周期、模拟输入或步进物理。原场景和贴图/材质/配置资产未改。
+
+停止Play，等待编译后重新进入存档。独立回退：D:/UnityProjects/_CodexBackups/sushi-island-boundary-visuals-20261028/README.md，完整钓鱼移植回退同步；不直接修改真实存档。

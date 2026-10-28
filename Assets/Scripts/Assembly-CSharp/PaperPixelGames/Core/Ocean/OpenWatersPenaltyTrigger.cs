@@ -6,6 +6,7 @@ using PaperPixelGames.Framework.Patterns;
 using PaperPixelGames.Framework.UI.Notify;
 using PaperPixelGames.Framework.Utility;
 using UnityEngine;
+using UnityEngine.Rendering;
 using SushiAndFish.FishingIntegration;
 
 namespace PaperPixelGames.Core.Ocean
@@ -51,6 +52,10 @@ namespace PaperPixelGames.Core.Ocean
 		// walk out of an authorised island while remaining inside this collider.
 		private bool _isPenaltyActive;
 
+		private Volume _boundaryPostProcessing;
+
+		private readonly BoundaryVolumeVisibility _boundaryVisibility = new BoundaryVolumeVisibility();
+
 		private OffscreenIndicatorHandler _restaurantIndicatorHandler;
 
 		private OffscreenIndicatorHandler.OffscreenIndicatorHandle _restaurantIndicatorHandle;
@@ -66,6 +71,7 @@ namespace PaperPixelGames.Core.Ocean
 
 		private void Awake()
 		{
+			_boundaryPostProcessing = GetComponent<Volume>();
 			Collider component = GetComponent<Collider>();
 			if (component != null && !component.isTrigger)
 			{
@@ -92,6 +98,19 @@ namespace PaperPixelGames.Core.Ocean
 					_localPlayer.DivingEquipment.TickOpenWaterPenalty(Time.deltaTime);
 				}
 			}
+		}
+
+		private void LateUpdate()
+		{
+			// URP blends this local Volume independently of the warning trigger.
+			// Reconcile by camera location even in its blend fringe, on first load,
+			// after a teleport, or when trigger overlap callbacks were missed.
+			if (_boundaryPostProcessing == null) _boundaryPostProcessing = GetComponent<Volume>();
+			var player = Singleton<PlayersManager>.Instance?.LocalPlayer;
+			bool authorised = player != null && player.IsOwner && player.IsSpawned &&
+				player.IsLocalGameplayPreparationReady && player.GameplayCamera != null &&
+				ArchipelagoTravelArea.AllowsCurrentWorld(player.GameplayCamera.transform.position);
+			_boundaryVisibility.Apply(_boundaryPostProcessing, authorised);
 		}
 
 		private void OnTriggerEnter(Collider other)
@@ -151,6 +170,7 @@ namespace PaperPixelGames.Core.Ocean
 
 		private void OnDisable()
 		{
+			_boundaryVisibility.Release();
 			if (!_isLocalPlayerInside)
 			{
 				HideRestaurantIndicator();
