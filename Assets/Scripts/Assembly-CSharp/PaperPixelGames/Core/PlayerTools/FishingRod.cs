@@ -35,27 +35,6 @@ namespace PaperPixelGames.Core.PlayerTools
 {
 	public sealed class FishingRod : BaseTool
 	{
-		// A per-player replicated choice: exactly one backend owns the tool slot.
-		private readonly NetworkVariable<bool> _migratedBackend = new NetworkVariable<bool>(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-		public bool UsesMigratedFishing => SushiAndFish.FishingIntegration.FishingMigration.Enabled && _migratedBackend.Value;
-		public bool TrySelectBackend(bool migrated)
-		{
-			if (!base.IsOwner || !base.IsSpawned || base.ToolStatus) return false;
-			_migratedBackend.Value = migrated;
-			return true;
-		}
-		public void CancelForBackendChange()
-		{
-			if (base.IsOwner && !UsesMigratedFishing)
-				CancelFishingSession(FishingCancelReason.ToolDisabled, returnToReady: true, releaseMovement: true);
-		}
-		private void OnBackendChanged(bool previous, bool current)
-		{
-			if (base.IsServer) { ServerReleaseUndeliveredReward(); ServerAbortFishing(); }
-			if (base.IsOwner) CancelFishingSession(FishingCancelReason.ToolDisabled, returnToReady: false, releaseMovement: true);
-			SushiAndFish.FishingIntegration.FishingMigration.ToolStatus(_player, false);
-			ApplyToolStatus(base.ToolStatus);
-		}
 		private enum FishingSessionState : byte
 		{
 			Inactive = 0,
@@ -493,7 +472,6 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		protected override void NetworkSpawn()
 		{
-			_migratedBackend.OnValueChanged += OnBackendChanged;
 			if (_player != null)
 			{
 				NetworkVariable<byte> colorIndex = _player.ColorIndex;
@@ -539,7 +517,6 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		protected override void NetworkDespawn()
 		{
-			_migratedBackend.OnValueChanged -= OnBackendChanged;
 			if (base.IsServer)
 			{
 				ServerReleaseUndeliveredReward();
@@ -634,12 +611,12 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		public override bool DisableIf()
 		{
-			return UsesMigratedFishing||!IsFishingActive;
+			return SushiAndFish.FishingIntegration.FishingMigration.Enabled||!IsFishingActive;
 		}
 
 		protected override void ApplyToolStatus(bool status)
 		{
-            if(UsesMigratedFishing){
+            if(SushiAndFish.FishingIntegration.FishingMigration.Enabled){
                 base.ApplyToolStatus(status);SetFishingRodEquippedAnimation(status);DisableHints();
                 if(_fpsGraphicParent)_fpsGraphicParent.gameObject.SetActive(false);if(_tpsGraphicParent)_tpsGraphicParent.gameObject.SetActive(false);
                 if(_fishingRodUI)_fishingRodUI.gameObject.SetActive(false);
@@ -866,7 +843,6 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		public override void Interact(InputActionPhase phase)
 		{
-			if (UsesMigratedFishing) return;
 			if (base.IsOwner && base.ToolStatus && phase == InputActionPhase.Started && _state == FishingSessionState.Ready)
 			{
 				OpenFishingTutorial();
@@ -922,7 +898,7 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		private void Update()
 		{
-            if(UsesMigratedFishing)return;
+            if(SushiAndFish.FishingIntegration.FishingMigration.Enabled)return;
 			TickServerFishing();
 			if (!base.IsOwner)
 			{
@@ -1763,7 +1739,7 @@ namespace PaperPixelGames.Core.PlayerTools
 				return false;
 			}
 			List<FishSO> list = (from fish in _itemDatabaseSO.GetAllOfType(ItemType.Creature).OfType<FishSO>()
-				where fish != null && !fish.Id.StartsWith("HTF_", StringComparison.Ordinal) && fish.FishingRodSettings != null && fish.FishingRodSettings.Enabled && fish.DeadPrefab != null && (fish.ZoneLayer & zone) != 0
+				where fish != null && fish.FishingRodSettings != null && fish.FishingRodSettings.Enabled && fish.DeadPrefab != null && (fish.ZoneLayer & zone) != 0
 				select fish).ToList();
 			if (list.Count == 0)
 			{
@@ -3474,7 +3450,7 @@ namespace PaperPixelGames.Core.PlayerTools
 
 		private bool ServerHasSession(uint id)
 		{
-			if (!UsesMigratedFishing && id != 0)
+			if (id != 0)
 			{
 				return id == _serverSessionId;
 			}
@@ -3514,7 +3490,7 @@ namespace PaperPixelGames.Core.PlayerTools
 				return;
 			}
 			__rpc_exec_stage = __RpcExecStage.Send;
-			if (!base.IsServer || UsesMigratedFishing || rpcParams.Receive.SenderClientId != base.OwnerClientId)
+			if (!base.IsServer || rpcParams.Receive.SenderClientId != base.OwnerClientId)
 			{
 				return;
 			}
@@ -4007,9 +3983,6 @@ namespace PaperPixelGames.Core.PlayerTools
 			_presentationCaughtWeight.Initialize(this);
 			__nameNetworkVariable(_presentationCaughtWeight, "_presentationCaughtWeight");
 			NetworkVariableFields.Add(_presentationCaughtWeight);
-			_migratedBackend.Initialize(this);
-			__nameNetworkVariable(_migratedBackend, "_migratedBackend");
-			NetworkVariableFields.Add(_migratedBackend);
 			base.__initializeVariables();
 		}
 

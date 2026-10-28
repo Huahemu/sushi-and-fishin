@@ -31,7 +31,7 @@ namespace SushiAndFish.FishingIntegration {
         public float SeaHeight {get {var ocean=OceanFollowBehaviour.Instance;float height=ocean?ocean.transform.position.y:Config.seaHeight;return float.IsFinite(height)?height:Config.seaHeight;}}
         public FishingActor Local=>actors.Values.FirstOrDefault(a=>a.player&&a.player.IsOwner);
         public static bool Enabled=>Instance&&Instance.Config&&Instance.Config.enabled;
-        public static bool UsesMigratedFishing(PPG_Player player)=>Enabled&&player&&player.FishingRod&&player.FishingRod.UsesMigratedFishing;
+        public static bool UsesMigratedFishing(PPG_Player player)=>Enabled&&player&&player.FishingRod&&player.FishingRod.ToolStatus;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot(){if(Instance)return;var config=MigrationConfig.Load();if(!config||!config.enabled)return;var go=new GameObject("Sushi fishing integration");DontDestroyOnLoad(go);go.AddComponent<FishingMigration>().Config=config;}
@@ -57,11 +57,12 @@ namespace SushiAndFish.FishingIntegration {
                 if(player.IsSpawned&&player.IsOwner)PlayerResumeController.Ensure(player);
                 if(!player.IsSpawned||actors.ContainsKey(player.OwnerClientId)||player.IsOwner&&(!player.IsLocalGameplayPreparationReady||!player.GameplayCamera))continue;
                 var actor=new FishingActor(this,player);actors.Add(player.OwnerClientId,actor);
-                if(player.IsOwner)gameObject.AddComponent<FishingHud>().Bind(actor);
+                if(player.IsOwner){Singleton<PaperPixelGames.Wheel.PPG_WheelManager>.Instance?.UnlockHarpoon(player.ToolsData.HarpoonUnlocked);gameObject.AddComponent<FishingHud>().Bind(actor);}
             }
             foreach(var id in actors.Keys.ToArray())if(!actors[id].player){SaveWorld();actors[id].Dispose();actors.Remove(id);}
         }
         void ResetWorld(){
+            var nativeSelection=GetComponent<NativeSpearfishingAccess>();if(nativeSelection)nativeSelection.Cancel();
             ClearWalkCollisions();
             ClearArchipelago();
             UnbindWire();foreach(var actor in actors.Values)actor.Dispose();actors.Clear();
@@ -79,6 +80,12 @@ namespace SushiAndFish.FishingIntegration {
             Instance.DiscoverPlayers();var actor=Instance.Local;if(actor==null||actor.player!=player)return false;
             actor.OpenEquipmentPage();return true;
         }
+        public static bool OpenNativeHarpoon(PPG_Player player,IWheelSlice data){
+            if(!Enabled||!(data is PaperPixelGames.Core.Data.Tools.HarpoonData)||!player||!player.IsOwner)return false;
+            Instance.DiscoverPlayers();var actor=Instance.Local;if(actor==null||actor.player!=player)return false;
+            var selection=Instance.GetComponent<NativeSpearfishingAccess>();if(!selection)selection=Instance.gameObject.AddComponent<NativeSpearfishingAccess>();
+            selection.Open(actor);return true;
+        }
         public static bool ToolInput(PPG_Player player,string action,InputActionPhase phase){
             if(!UsesMigratedFishing(player)||!player.IsOwner)return false;
             if(!Instance.actors.TryGetValue(player.OwnerClientId,out var actor)||!actor.equipped)return true;
@@ -88,6 +95,7 @@ namespace SushiAndFish.FishingIntegration {
         public static bool Interact(PPG_Player player,InputActionPhase phase){
             if(Enabled&&Instance.Archipelago&&Instance.Archipelago.Interact(player,phase))return true;
             if(!Enabled||!player||!player.IsOwner||phase!=InputActionPhase.Started)return false;
+            if(player.ActiveTool&&player.ActiveTool.CapturesInteractInput)return false;
             var actor=Instance.Local;if(actor==null)return false;
             var camera=actor.Camera;if(!camera)return false;
             if(Physics.Raycast(camera.transform.position,camera.transform.forward,out var hit,4,~0,QueryTriggerInteraction.Ignore)){

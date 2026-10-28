@@ -14,7 +14,7 @@ namespace SushiAndFish.FishingIntegration {
   }
   public void Open(){if(!manager||!page)return;if(opening!=null)StopCoroutine(opening);if(choosing!=null)StopCoroutine(choosing);choiceQueued=false;manager.DeactiveWheel(false);opening=StartCoroutine(OpenPage());}
   void Add(string title,Sprite icon,int index){var slice=ScriptableObject.CreateInstance<FishingEquipmentSlice>();slice.title=title;slice.icon=icon;slice.index=index;slices.Add(slice);}
-  void Rebuild(){int mask=actor.world.SaveData.ownedWeapons;if(shownMask==mask)return;shownMask=mask;page.ClearRuntimePage();foreach(var slice in slices)if(slice)Destroy(slice);slices.Clear();var c=actor.world.Config;Add("原版钓竿",actor.player.FishingRod.Icon,-2);Add("海钓竿",c.rodIcon,-1);foreach(var offer in c.weapons.OrderBy(w=>w.index))if(actor.world.OwnsWeapon(offer.index))Add(offer.title,offer.icon,offer.index);Add("收起装备",c.stowIcon,5);page.PopulateRuntimeElements(manager.ToolWheel.ElementTemplate,slices);IsolateIcons(page.gameObject);}
+  void Rebuild(){int mask=actor.world.SaveData.ownedWeapons;if(shownMask==mask)return;shownMask=mask;page.ClearRuntimePage();foreach(var slice in slices)if(slice)Destroy(slice);slices.Clear();var c=actor.world.Config;Add("海钓竿",c.rodIcon,-1);foreach(var offer in c.weapons.OrderBy(w=>w.index))if(actor.world.OwnsWeapon(offer.index))Add(offer.title,offer.icon,offer.index);Add("收起装备",c.stowIcon,5);page.PopulateRuntimeElements(manager.ToolWheel.ElementTemplate,slices);IsolateIcons(page.gameObject);}
   void IsolateIcons(GameObject root){foreach(var image in root.GetComponentsInChildren<UnityEngine.UI.Image>(true))if(FishingIconGeometry.IsOutlined(image.sprite)){image.useSpriteMesh=true;image.preserveAspect=true;FishingIconGeometry.Attach(image);}}
   IEnumerator OpenPage(){yield return null;if(manager&&page){Rebuild();manager.ActivateWheel(page,0,false);}opening=null;}
   void OnChoice(IWheelSlice data){if(choiceQueued||!(data is FishingEquipmentSlice slice))return;choiceQueued=true;manager.DeactiveWheel(false);choosing=StartCoroutine(ChooseAfterClose(slice.index));}
@@ -25,7 +25,6 @@ namespace SushiAndFish.FishingIntegration {
     if(Time.unscaledTime>=retryAt&&actor.player.CanStartControlAction(PlayerControlAction.ActivateTool)){
      retryAt=Time.unscaledTime+.05f;
      if(index==5){if(actor.player.TryDisableActiveToolForModeChange()){actor.Send("stow",0);choosing=null;yield break;}}
-     else if(index==-2){if(actor.player.TryEquipFishingBackend(false)){choosing=null;yield break;}}
      else if(actor.world.OwnsWeapon(index)&&actor.player.TryEquipMigratedFishing()){
       actor.Send("weapon",index);
       if(actor.world.Server||(actor.world.ActorSnapshots.TryGetValue(actor.player.OwnerClientId,out var state)&&state.equipped&&state.equipment==index)){choosing=null;yield break;}

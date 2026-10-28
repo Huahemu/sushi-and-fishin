@@ -9318,13 +9318,11 @@ namespace PaperPixelGames.Core.Player
 			}
 		}
 
-        public bool TryEquipMigratedFishing()=>TryEquipFishingBackend(true);
-        public bool TryEquipFishingBackend(bool migrated){
-            if(!IsOwner||!_fishingRod||!_fishingRod.IsUnlocked||!CanStartControlAction(PlayerControlAction.ActivateTool))return false;
-            if(ActiveTool==_fishingRod&&_fishingRod.ToolStatus&&_fishingRod.UsesMigratedFishing==migrated)return true;
-            if(ActiveTool==_fishingRod)_fishingRod.CancelForBackendChange();
-            if(!TryDisableActiveToolForModeChange()||!_fishingRod.TrySelectBackend(migrated))return false;
-            ToggleFishingRod(true);return ActiveTool==_fishingRod&&_fishingRod.ToolStatus;
+        public bool TryEquipMigratedFishing(){if(!IsOwner||!_fishingRod||!_fishingRod.IsUnlocked||!CanStartControlAction(PlayerControlAction.ActivateTool))return false;if(ActiveTool==_fishingRod&&_fishingRod.ToolStatus)return true;ToggleFishingRod(true);return ActiveTool==_fishingRod&&_fishingRod.ToolStatus;}
+        public bool TryEquipNativeHarpoon(){
+            if(!IsOwner||!_harpoon||!_harpoon.IsUnlocked||!CanStartControlAction(PlayerControlAction.ActivateTool))return false;
+            if(ActiveTool==_harpoon&&_harpoon.ToolStatus)return true;
+            ToggleHarpoon(true);return ActiveTool==_harpoon&&_harpoon.ToolStatus;
         }
 		private void ToggleFishingRod(bool forceActive = false)
 		{
@@ -9981,6 +9979,7 @@ namespace PaperPixelGames.Core.Player
 
 		public void OnToolSelect(IWheelSlice data)
 		{
+            if(SushiAndFish.FishingIntegration.FishingMigration.OpenNativeHarpoon(this,data)){LastToolAction=ToggleHarpoon;return;}
             if(SushiAndFish.FishingIntegration.FishingMigration.OpenFishingEquipment(this,data)){LastToolAction=ToggleFishingRod;return;}
 			if (data == null || !(data is BaseToolData baseToolData) || IsUsingEmoteArea)
 			{

@@ -93,6 +93,7 @@ namespace SushiAndFish.FishingIntegration {
             if((!inputActive||!FishingMigration.UsesMigratedFishing(player))&&(action=="left"||action=="right"||action=="reload"||action=="bait"))return;
             if((action=="equip"||action=="weapon")&&value>=0&&!world.OwnsWeapon((int)value)){world.Notify(player.OwnerClientId,"先在平板 · 升级 · 枪械中购买这把枪");return;}
             switch(action){
+                case "native-harpoon":NativeSpearfishingAccess.UnlockOnServer(this);break;
                 case "buy-weapon":world.BuyWeapon(this,(int)value);break;
                 case "control":inputActive=value>.5f;if(!inputActive){left=previousLeft=right=previousRight=false;module.SetReeling(0);if(module.State==FishingState.Charging)module.Abort();if(equipment>=0)module.combat.guns[equipment].SetAim(false);}break;
                 case "equip":equipped=true;RequestEquipment(Mathf.Clamp((int)value,-1,4));break;
@@ -147,6 +148,7 @@ namespace SushiAndFish.FishingIntegration {
             tool.SetPositionAndRotation(FishingGripPose.RootPosition(target,rotation,grip,tool.lossyScale),rotation);if(item)item.SyncBodies();
         }
         public void LateTick(){
+            if(!equipped||!FishingMigration.UsesMigratedFishing(player))return;
             if(world.Server&&rig){RefreshGrips();foreach(var hand in rig.hands){if(!hand||!hand.Held)continue;var item=hand.Held;if(item.kind==FishingItemKind.Catch){item.SyncBodies();continue;}int index=item.kind==FishingItemKind.Rod?0:Array.FindIndex(module.combat.guns,g=>g.item==item)+1;var fingers=sourceFingers!=null&&index>=0&&index<sourceFingers.Length?sourceFingers[index]:null;PoseHeldTool(item.transform,item,fingers,item.kind==FishingItemKind.Rod?module.rod.HandRotation:Quaternion.identity,hand.transform.position);}}
             else if(player.IsOwner&&visualRoot&&Camera){if(replicaFingers==null)replicaFingers=FishingGripPose.AuthoredFingers(visualRoot.transform);var rotation=world.ActorSnapshots.TryGetValue(player.OwnerClientId,out var state)&&equipment<0?state.rodRotation:Quaternion.identity;var view=player.MainCamera?player.MainCamera:Camera;PoseHeldTool(visualRoot.transform,null,replicaFingers,rotation,view.transform.TransformPoint(GripLocal(1)));}
         }

@@ -21,24 +21,9 @@ public static class VerifyDualFishingResidents {
  static bool Active(Transform t){for(;t;t=t.parent)if(!t.gameObject.activeSelf)return false;return true;}
  public static void Run(){
   Directory.CreateDirectory(Out);Check(!EditorApplication.isPlaying,"Verification never enters Play or initializes a game/player/network/AI session");
-  var config=MigrationConfig.Load();var original=config.database._allItems.OfType<FishSO>().Where(f=>!f.Id.StartsWith("HTF_")&&f.FishingRodSettings!=null&&f.FishingRodSettings.Enabled&&f.DeadPrefab).ToArray();
-  Check(original.Length>0,"Original fishing keeps its existing enabled fish definitions and dead-fish prefabs");
-  Check(config.species.All(b=>!b.original.FishingRodSettings.Enabled&&(!b.shiny||!b.shiny.FishingRodSettings.Enabled)),"All imported fish still belong exclusively to the migrated fishing pool");
-  string rod=Native("Core/PlayerTools/FishingRod"),player=Native("Core/Player/PPG_Player"),migration=Integration("FishingMigration"),actor=Integration("FishingActor"),wheel=Integration("FishingEquipmentWheel"),network=Integration("MigrationNetworking");
-  Check(rod.Contains("NetworkVariable<bool> _migratedBackend")&&rod.Contains("NetworkVariableWritePermission.Owner")&&rod.Contains("_migratedBackend.Value"),"Each player's replicated mode has owner-only writes; there is no global native-versus-migrated toggle");
-  Check(rod.Split(new[]{"NetworkVariableFields.Add(_migratedBackend)"},StringSplitOptions.None).Length==2&&rod.Contains("_migratedBackend.Initialize(this)")&&rod.Contains("__nameNetworkVariable(_migratedBackend"),"New backend field is registered exactly once in the recovered Netcode variable initializer");
-  Check(rod.Contains("_migratedBackend.OnValueChanged += OnBackendChanged")&&rod.Contains("_migratedBackend.OnValueChanged -= OnBackendChanged"),"Mode-change lifecycle is registered and cleaned up");
-  Check(rod.Contains("if(UsesMigratedFishing)return;")&&rod.Contains("if(UsesMigratedFishing){")&&rod.Contains("if (UsesMigratedFishing) return;"),"Only the selected implementation runs rod update, visuals and interact input");
-  Check(migration.Contains("if(!UsesMigratedFishing(player)||!player.IsOwner)return false"),"Native mouse input passes through without also commanding the migrated module");
-  Check(rod.Contains("if (!UsesMigratedFishing && id != 0)")&&rod.Contains("!base.IsServer || UsesMigratedFishing || rpcParams.Receive.SenderClientId"),"Server refuses native cast acceptance/rewards while the migrated backend is selected");
-  Check(actor.Contains("!FishingMigration.UsesMigratedFishing(player)||!player.ToolsData.FishingRodUnlocked")&&actor.Contains("!inputActive||!FishingMigration.UsesMigratedFishing(player)"),"Server refuses migrated casts/shots/equipment commands while the native backend is selected");
-  Check(rod.Contains("ServerReleaseUndeliveredReward(); ServerAbortFishing();")&&rod.Contains("CancelFishingSession(FishingCancelReason.ToolDisabled")&&rod.Contains("FishingMigration.ToolStatus(_player, false)"),"Switching releases pending native delivery and cancels the old session and migrated line before reapplying tool status");
-  Check(player.Contains("_fishingRod.CancelForBackendChange()")&&player.Contains("!TryDisableActiveToolForModeChange()||!_fishingRod.TrySelectBackend(migrated)"),"Mode selection first cancels/stows the old tool through the native control guards");
-  Check(wheel.Contains("Add(\"原版钓竿\",actor.player.FishingRod.Icon,-2)")&&wheel.Contains("Add(\"海钓竿\",c.rodIcon,-1)")&&wheel.Contains("TryEquipFishingBackend(false)"),"Existing native-style wheel exposes separate original and sea-fishing rods with their existing artwork");
-  Check(network.Contains("view.equipped=actor.equipped&&FishingMigration.UsesMigratedFishing(view.player)"),"Delayed snapshots cannot show migrated weapons over the selected native rod");
-  Check(rod.Contains("!fish.Id.StartsWith(\"HTF_\", StringComparison.Ordinal)")&&rod.Contains("_serverRewardAllocated")&&rod.Contains("FishingRodChallenge.IsNewerSession"),"Native species identity and existing session/reward idempotence remain in place");
+  VerifyNativeSpearfishing.VerifyFishing();
   VerifyResidents();
-  Debug.Log("DUAL_FISHING_RESIDENTS_VERIFIED checks="+checks.Count+" nativeFish="+original.Length+" play=false simulation=false");
+  Debug.Log("DUAL_FISHING_RESIDENTS_VERIFIED checks="+checks.Count+" nativeSpearfishing=true"+" play=false simulation=false");
  }
  static void VerifyResidents(){
   var data=AssetDatabase.FindAssets("t:ResidentDataSO",new[]{"Assets/MonoBehaviour"}).Select(g=>AssetDatabase.LoadAssetAtPath<ResidentDataSO>(AssetDatabase.GUIDToAssetPath(g))).ToArray();

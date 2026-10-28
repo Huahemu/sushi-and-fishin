@@ -301,7 +301,7 @@ namespace PaperPixelGames.Wheel
 
 		public void UnlockHarpoon(bool status)
 		{
-			_harpoon.SetLock(status);
+			_harpoon.SetLock(status || SushiAndFish.FishingIntegration.FishingMigration.Enabled);
 		}
 
 		public void UnlockFishingRod(bool status)
