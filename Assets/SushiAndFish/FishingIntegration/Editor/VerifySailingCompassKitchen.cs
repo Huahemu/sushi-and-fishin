@@ -58,8 +58,8 @@ public static class VerifySailingCompassKitchen
         Check(Vector2.Distance(SailingCompassMath.Direction(Vector3.zero,Vector3.back*10,179),
             SailingCompassMath.Direction(Vector3.zero,Vector3.back*10,-179)) < .04f,"Heading wrap at 180 degrees stays continuous");
         string hud = File.ReadAllText("Assets/SushiAndFish/FishingIntegration/Runtime/FishingHud.cs");
-        Check(hud.Contains("islands.IsDriver(actor.player)||islands.OnDeck(actor.player)") && hud.Contains("compass.Show(aboard)")
-            && hud.Contains("actor.Camera.transform.eulerAngles.y"),"Driver and passenger navigation uses current view and hides after disembarking");
+        Check(hud.Contains("islands.IsDriver(actor.player)||islands.OnDeck(actor.player)") && hud.Contains("boatCompass.Render(")
+            && hud.Contains("aboard&&!blocked"),"Driver and passenger navigation is mounted on the boat screen and hides after disembarking/tablet opening");
         string archipelago = File.ReadAllText("Assets/SushiAndFish/FishingIntegration/Runtime/ArchipelagoWorld.cs");
         Check(archipelago.Contains("hints.RenderSailing(true,Boat.MotorReady,Boat.Speed,null,null)") && !archipelago.Contains("Heading(delta)"),
             "Text destination list is replaced while native boat controls, engine and speed hints remain");
