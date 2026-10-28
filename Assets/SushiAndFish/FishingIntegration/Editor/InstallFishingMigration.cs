@@ -67,6 +67,7 @@ public static class InstallFishingMigration {
         File.WriteAllText("FishingIngredientRoutes.txt",routes.ToString());
         InstallFishingUIFix.ApplyIconGeometry(config);AssetDatabase.SaveAssets();
         InstallFishingCuisine.ApplyAssets();
+        InstallSailingCompass.ApplyAssets();
         Verify(config,originalCreatures.Select(i=>i.Id).ToArray());
         File.WriteAllLines("FishingMigrationChecks.txt",checks);Debug.Log("SUSHI_FISHING_MIGRATION_ASSETS_PASS original="+originalCreatures.Length+" added="+mapping.Count+" appearances="+mapping.Sum(b=>b.shiny?2:1));
     }

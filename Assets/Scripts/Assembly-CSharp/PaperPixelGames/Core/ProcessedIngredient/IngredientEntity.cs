@@ -40,7 +40,9 @@ namespace PaperPixelGames.Core.ProcessedIngredient
 			}
 		}
 
-		public bool IsPlaceableOnChefDesk => _isPlaceableOnChefDesk;
+		// Preparation readiness belongs to the actual item data, not only to
+		// the shared pickup prefab's original serialized authoring flag.
+		public bool IsPlaceableOnChefDesk => _isPlaceableOnChefDesk || base.ItemSO is ProcessedIngredientSO;
 
 		public IngredientSO IngredientSO => base.ItemSO as IngredientSO;
 

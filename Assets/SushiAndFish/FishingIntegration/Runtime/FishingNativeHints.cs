@@ -44,7 +44,7 @@ namespace SushiAndFish.FishingIntegration {
             row.label.text=text;row.icon.gameObject.SetActive(!string.IsNullOrEmpty(key));row.icon.text=string.IsNullOrEmpty(key)?"":"<sprite name="+key+">";
         }
         public void RenderSailing(bool driving,bool motorReady,float speed,string route,string notice){if(rows.Count<4)return;
-            Set(0,true,driving?null:"key1_e",driving?"W/S 前进倒车 · A/D 转向":notice);Set(1,driving,"key1_e","退出驾驶 · G 同样可用");Set(2,driving,null,motorReady?"航速 "+(speed*3.6f).ToString("F0")+" km/h":"发动机启动中");Set(3,driving,null,route);
+            Set(0,true,driving?null:"key1_e",driving?"W/S 前进倒车 · A/D 转向":notice);Set(1,driving,"key1_e","退出驾驶 · G 同样可用");Set(2,driving,null,motorReady?"航速 "+(speed*3.6f).ToString("F0")+" km/h":"发动机启动中");Set(3,driving&&!string.IsNullOrEmpty(route),null,route);
         }
         public void RenderWaterAccess(string action,string notice){if(rows.Count<4)return;Set(0,true,null,action);Set(1,false,null,null);Set(2,false,null,null);Set(3,!string.IsNullOrEmpty(notice),null,notice);}
         void OnDestroy(){if(font)Remove(font);if(sprites)Remove(sprites);if(spriteMaterial)Remove(spriteMaterial);}

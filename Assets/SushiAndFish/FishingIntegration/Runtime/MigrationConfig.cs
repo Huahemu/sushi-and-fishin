@@ -26,6 +26,7 @@ namespace SushiAndFish.FishingIntegration {
         public FishingSpeciesBinding[] species;
         public Material grayscale,silhouette;
         public Sprite panelSprite,buttonSprite,rodIcon,gunIcon,warehouseIcon,stowIcon;
+        public Sprite compassCircle,compassFace,compassDot,compassArrow;
         public Sprite[] equipmentIcons;
         public FishingWeaponOffer[] weapons;
         public TextAsset iconGeometry;

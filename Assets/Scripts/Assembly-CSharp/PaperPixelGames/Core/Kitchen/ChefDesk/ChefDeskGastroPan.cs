@@ -27,6 +27,7 @@ namespace PaperPixelGames.Core.Kitchen.ChefDesk
 {
 	public class ChefDeskGastroPan : BaseInteractable, IHeldItemMouse1Interactable, ISaveable<ChefDeskGastropanData>
 	{
+		private const string RAW_PREPARATION_MESSAGE = "这是待加工原料，请先在备料台切片或切条，再用料盘转入主厨台。";
 		[SerializeField]
 		private ChefDeskGastropanInteractor _gastropanInteractor;
 
@@ -1142,6 +1143,11 @@ namespace PaperPixelGames.Core.Kitchen.ChefDesk
 				return;
 			}
 			ProcessedIngredientSO processedIngredientSO = ResolveProcessedIngredientSO(component2);
+			if (!component2.IsPlaceableOnChefDesk)
+			{
+				_chefDesk.ClientShowNotifyRpc("Info", RAW_PREPARATION_MESSAGE, baseRpcTarget);
+				return;
+			}
 			if (processedIngredientSO == null)
 			{
 				_chefDesk.ClientShowNotifyRpc("Error", "notification.chef.action_failed", baseRpcTarget);
@@ -1496,20 +1502,18 @@ namespace PaperPixelGames.Core.Kitchen.ChefDesk
 					UtilityMethods.Log("[ChefDeskGastroPan - CanPlaceHeldIntoGastropan] Ingredient cannot be used on ChefDesk.");
 					if (showNotify && Singleton<NotifyManager>.Instance != null)
 					{
-						Singleton<NotifyManager>.Instance.ShowToast("The ingredients are different. The transfer cannot be completed.");
+						Singleton<NotifyManager>.Instance.ShowToast(RAW_PREPARATION_MESSAGE);
 					}
 					return false;
 				}
-				string text = string.Empty;
-				IngredientSO ingredientSO = ingredientEntity.IngredientSO;
-				if (ingredientSO != null && ingredientSO.ProcessedIngredients.Count > 0)
+				// Use the same item-data resolver as the server. A prepared item
+				// may share a generic pickup component with its raw template.
+				ProcessedIngredientSO prepared = ResolveProcessedIngredientSO(ingredientEntity);
+				if (prepared == null || string.IsNullOrEmpty(prepared.Id))
 				{
-					text = ingredientSO.ProcessedIngredients[0].Id;
+					return false;
 				}
-				if (ingredientSO == null && ingredientEntity is ProcessedIngredientEntity { ItemSO: ProcessedIngredientSO itemSO })
-				{
-					text = itemSO.Id;
-				}
+				string text = prepared.Id;
 				if (_ingredientCount.Value == 0)
 				{
 					UtilityMethods.Log("[ChefDeskGastroPan - CanPlaceHeldIntoGastropan] <color=green>Pan empty → IngredientEntity accepted.</color>");

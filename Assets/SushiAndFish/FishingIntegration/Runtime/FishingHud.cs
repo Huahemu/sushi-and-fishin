@@ -8,7 +8,7 @@ using PaperPixelGames.Wheel;
 
 namespace SushiAndFish.FishingIntegration {
     public sealed class FishingHud:MonoBehaviour {
-        FishingActor actor;Canvas canvas;RectTransform panel,eventPanel;Image health,portrait;TMP_Text nameText,healthText,status,eventText;FishingNativeHints nativeHints;string focused;
+        FishingActor actor;Canvas canvas;RectTransform panel,eventPanel;Image health,portrait;TMP_Text nameText,healthText,status,eventText;FishingNativeHints nativeHints;SailingCompass compass;string focused;
         public void Bind(FishingActor owner){actor=owner;Build();}
         void Build(){
             var root=new GameObject("Native-style fishing HUD",typeof(RectTransform),typeof(Canvas),typeof(CanvasScaler));root.transform.SetParent(transform);canvas=root.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=50;var scale=root.GetComponent<CanvasScaler>();scale.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scale.referenceResolution=new Vector2(1920,1080);scale.matchWidthOrHeight=.5f;
@@ -18,6 +18,7 @@ namespace SushiAndFish.FishingIntegration {
             status=Label(panel,new Vector2(.5f,0),new Vector2(40,20),new Vector2(390,28),17);
             eventPanel=Panel(canvas.transform,new Vector2(.5f,1),new Vector2(0,-254),new Vector2(530,58));eventText=Label(eventPanel,new Vector2(.5f,.5f),Vector2.zero,new Vector2(490,48),18);
             nativeHints=root.AddComponent<FishingNativeHints>();nativeHints.Build(actor.world.Config);
+            var navigation=new GameObject("Original HowToFish sailing compass",typeof(RectTransform));navigation.transform.SetParent(root.transform,false);compass=navigation.AddComponent<SailingCompass>();compass.Build(actor.world.Config);
         }
         void Update(){if(actor==null||!actor.player||!canvas)return;bool blocked=actor.player.IsTabletActive;canvas.enabled=!blocked;var world=actor.world;
             FishingSnapshot fish=null;
@@ -31,7 +32,9 @@ namespace SushiAndFish.FishingIntegration {
             var notice=!string.IsNullOrEmpty(actor.message)&&Time.unscaledTime<actor.messageUntil?actor.message:null;
             if(notice!=null&&(notice.Contains("右键抛竿，左键收线")||notice.Contains("左键射击，右键瞄准")))notice=null;
             int index=a!=null?a.equipment:actor.equipment;var offer=world.Config.weapons?.FirstOrDefault(w=>w.index==index);
-            if(world.Archipelago&&world.Archipelago.RenderHints(nativeHints,actor))return;
+            var islands=world.Archipelago;bool aboard=islands&&islands.Boat&&(islands.IsDriver(actor.player)||islands.OnDeck(actor.player));
+            compass.Show(aboard);if(aboard&&actor.Camera)compass.Render(actor.player.transform.position,actor.Camera.transform.eulerAngles.y,islands.Settings.regions);
+            if(islands&&islands.RenderHints(nativeHints,actor))return;
             nativeHints.Render(a!=null?a.equipped:actor.equipped,index,a!=null?a.health:100,a!=null?a.ammo:0,a!=null?a.capacity:0,offer?.title??"鱼枪",notice,a!=null&&a.charging,a!=null?a.castPower:0,a!=null?a.castRange:0,fish!=null&&fish.attached&&fish.fisher==actor.player.OwnerClientId);
         }
         RectTransform Panel(Transform parent,Vector2 anchor,Vector2 pos,Vector2 size){var image=Image(parent,anchor,pos,size,Color.white);image.sprite=actor.world.Config.panelSprite;image.type=UnityEngine.UI.Image.Type.Sliced;return image.rectTransform;}
