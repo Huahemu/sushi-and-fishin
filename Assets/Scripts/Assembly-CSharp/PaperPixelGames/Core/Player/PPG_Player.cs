@@ -9318,7 +9318,14 @@ namespace PaperPixelGames.Core.Player
 			}
 		}
 
-        public bool TryEquipMigratedFishing(){if(!IsOwner||!_fishingRod||!_fishingRod.IsUnlocked||!CanStartControlAction(PlayerControlAction.ActivateTool))return false;if(ActiveTool==_fishingRod&&_fishingRod.ToolStatus)return true;ToggleFishingRod(true);return ActiveTool==_fishingRod&&_fishingRod.ToolStatus;}
+        public bool TryEquipMigratedFishing()=>TryEquipFishingBackend(true);
+        public bool TryEquipFishingBackend(bool migrated){
+            if(!IsOwner||!_fishingRod||!_fishingRod.IsUnlocked||!CanStartControlAction(PlayerControlAction.ActivateTool))return false;
+            if(ActiveTool==_fishingRod&&_fishingRod.ToolStatus&&_fishingRod.UsesMigratedFishing==migrated)return true;
+            if(ActiveTool==_fishingRod)_fishingRod.CancelForBackendChange();
+            if(!TryDisableActiveToolForModeChange()||!_fishingRod.TrySelectBackend(migrated))return false;
+            ToggleFishingRod(true);return ActiveTool==_fishingRod&&_fishingRod.ToolStatus;
+        }
 		private void ToggleFishingRod(bool forceActive = false)
 		{
 			if (HasHeldItemBlockingToolActivation(_fishingRod))

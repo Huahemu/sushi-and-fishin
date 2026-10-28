@@ -47,7 +47,7 @@ namespace SushiAndFish.FishingIntegration {
         void ReceiveArchive(ulong sender,FastBufferReader reader){if(sender!=NetworkManager.ServerClientId||Server)return;reader.ReadValueSafe(out string json);var snapshot=JsonUtility.FromJson<ArchiveSnapshot>(json);if(snapshot?.archive!=null){SaveData.archive=snapshot.archive;SaveData.ownedWeapons=snapshot.weapons;WarehouseLines=snapshot.stock??Array.Empty<WarehouseLine>();}}
         void ApplySnapshot(WorldSnapshot state){
             if(state==null)return;pendingSailing=state.boat;if(Archipelago)Archipelago.ApplySnapshot(state.boat);FishSnapshots.Clear();ActorSnapshots.Clear();EventTitle=state.eventTitle;EventDescription=state.eventDescription;EventRemaining=state.remaining;ApplyReplicaEvent(state.eventKind,state.remaining,state.duration);
-            foreach(var actor in state.actors??Array.Empty<ActorSnapshot>()){ActorSnapshots[actor.player]=actor;if(actors.TryGetValue(actor.player,out var view)){view.equipment=actor.equipment;view.equipped=actor.equipped;}}
+            foreach(var actor in state.actors??Array.Empty<ActorSnapshot>()){ActorSnapshots[actor.player]=actor;if(actors.TryGetValue(actor.player,out var view)){view.equipment=actor.equipment;view.equipped=actor.equipped&&FishingMigration.UsesMigratedFishing(view.player);}}
             foreach(var fish in state.fish??Array.Empty<FishingSnapshot>()){
                 FishSnapshots[fish.token]=fish;if(Server)continue;
                 if(!proxies.TryGetValue(fish.token,out var go)){

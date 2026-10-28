@@ -31,6 +31,7 @@ namespace SushiAndFish.FishingIntegration {
         public float SeaHeight {get {var ocean=OceanFollowBehaviour.Instance;float height=ocean?ocean.transform.position.y:Config.seaHeight;return float.IsFinite(height)?height:Config.seaHeight;}}
         public FishingActor Local=>actors.Values.FirstOrDefault(a=>a.player&&a.player.IsOwner);
         public static bool Enabled=>Instance&&Instance.Config&&Instance.Config.enabled;
+        public static bool UsesMigratedFishing(PPG_Player player)=>Enabled&&player&&player.FishingRod&&player.FishingRod.UsesMigratedFishing;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot(){if(Instance)return;var config=MigrationConfig.Load();if(!config||!config.enabled)return;var go=new GameObject("Sushi fishing integration");DontDestroyOnLoad(go);go.AddComponent<FishingMigration>().Config=config;}
@@ -79,7 +80,7 @@ namespace SushiAndFish.FishingIntegration {
             actor.OpenEquipmentPage();return true;
         }
         public static bool ToolInput(PPG_Player player,string action,InputActionPhase phase){
-            if(!Enabled||!player||!player.IsOwner)return false;
+            if(!UsesMigratedFishing(player)||!player.IsOwner)return false;
             if(!Instance.actors.TryGetValue(player.OwnerClientId,out var actor)||!actor.equipped)return true;
             if(!actor.ControlsAllowed){actor.Send("control",0);return true;}
             actor.Send(action,phase==InputActionPhase.Canceled?0:1);return true;

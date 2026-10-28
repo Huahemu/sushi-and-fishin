@@ -84,6 +84,7 @@ namespace PaperPixelGames.Core.Ai.NPCs
 		private readonly HashSet<ResidentController> _restaurantQueuedResidents = new HashSet<ResidentController>();
 
 		private bool _isInitDone;
+		private float _nextPopulationReconcile;
 
 		private int _currentHour = 8;
 
@@ -105,6 +106,13 @@ namespace PaperPixelGames.Core.Ai.NPCs
 
 		private void Update()
 		{
+			// Network/session teardown can remove residents while this scene
+			// manager is retained. Reconcile configured residents by stable ID.
+			if (_isInitDone && IsLiveNetworkAuthority() && Time.unscaledTime >= _nextPopulationReconcile)
+			{
+				_nextPopulationReconcile = Time.unscaledTime + 2f;
+				ReconcileHouseResidents();
+			}
 			if (IsLiveNetworkAuthority())
 			{
 				TryBroadcastResidentStateChanges();
@@ -114,6 +122,7 @@ namespace PaperPixelGames.Core.Ai.NPCs
 
 		public void Initialize()
 		{
+			if (_isInitDone && CanSpawnResidents()) ReconcileHouseResidents();
 			if (!_isInitDone)
 			{
 				_isInitDone = true;
@@ -898,6 +907,20 @@ namespace PaperPixelGames.Core.Ai.NPCs
 			return true;
 		}
 
+		private void ReconcileHouseResidents()
+		{
+			_residents.RemoveAll(r => r == null);
+			var expected = new HashSet<int>();
+			foreach (var binding in _houseBindings)
+				if (binding.HouseData != null && binding.HouseData.Residents != null)
+					foreach (var entry in binding.HouseData.Residents)
+						if (entry.ResidentData != null) expected.Add(entry.ResidentData.NpcID);
+			foreach (var resident in UnityEngine.Object.FindObjectsByType<ResidentController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+				if (resident != null && resident.ResidentData != null && expected.Contains(resident.ResidentData.NpcID) && !_residents.Contains(resident))
+					RegisterRuntimeResident(resident);
+			SpawnHouseResidents();
+		}
+
 		private void SpawnHouseResidents()
 		{
 			for (int i = 0; i < _houseBindings.Count; i++)
@@ -915,6 +938,16 @@ namespace PaperPixelGames.Core.Ai.NPCs
 
 		private void SpawnResident(HouseDataSO houseData, HouseDataSO.Resident entry)
 		{
+			if (entry.ResidentData != null)
+			{
+				var existing = _residents.Find(r => r != null && r.ResidentData != null && r.ResidentData.NpcID == entry.ResidentData.NpcID);
+				if (existing != null)
+				{
+					if (IsLiveNetworkAuthority() && existing.TryGetComponent<NetworkObject>(out var retained) && !retained.IsSpawned)
+						retained.Spawn(destroyWithScene: true);
+					return;
+				}
+			}
 			if (entry.ResidentPrefab == null || entry.ResidentData == null)
 			{
 				UtilityMethods.Log("[ResidentManager] House resident entry is missing prefab or resident data.", LogType.Warning);

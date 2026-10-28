@@ -34,7 +34,8 @@ namespace SushiAndFish.FishingIntegration {
             var islands=world.Archipelago;bool aboard=islands&&islands.Boat&&(islands.IsDriver(actor.player)||islands.OnDeck(actor.player));
             boatCompass.Render(islands?islands.Boat:null,world.Config,aboard&&!blocked,islands?islands.Settings.regions:null);
             if(islands&&islands.RenderHints(nativeHints,actor))return;
-            nativeHints.Render(a!=null?a.equipped:actor.equipped,index,a!=null?a.health:100,a!=null?a.ammo:0,a!=null?a.capacity:0,offer?.title??"鱼枪",notice,a!=null&&a.charging,a!=null?a.castPower:0,a!=null?a.castRange:0,fish!=null&&fish.attached&&fish.fisher==actor.player.OwnerClientId);
+            bool migrated=FishingMigration.UsesMigratedFishing(actor.player);
+            nativeHints.Render(migrated&&(a!=null?a.equipped:actor.equipped),index,a!=null?a.health:100,a!=null?a.ammo:0,a!=null?a.capacity:0,offer?.title??"鱼枪",migrated?notice:null,a!=null&&a.charging,a!=null?a.castPower:0,a!=null?a.castRange:0,fish!=null&&fish.attached&&fish.fisher==actor.player.OwnerClientId);
         }
         RectTransform Panel(Transform parent,Vector2 anchor,Vector2 pos,Vector2 size){var image=Image(parent,anchor,pos,size,Color.white);image.sprite=actor.world.Config.panelSprite;image.type=UnityEngine.UI.Image.Type.Sliced;return image.rectTransform;}
         Image Image(Transform parent,Vector2 anchor,Vector2 pos,Vector2 size,Color color){var go=new GameObject("Fishing UI",typeof(RectTransform),typeof(Image));go.transform.SetParent(parent,false);var image=go.GetComponent<Image>();var rect=image.rectTransform;rect.anchorMin=rect.anchorMax=anchor;rect.anchoredPosition=pos;rect.sizeDelta=size;image.color=color;image.raycastTarget=false;return image;}

@@ -11,7 +11,16 @@ namespace PaperPixelGames.Core.Ai.NPCs
 
 		private readonly ResidentDataSO _residentData;
 
-		private readonly GameObject _model;
+		private GameObject _model;
+
+		// Runtime registration/customization may replace the baked model after
+		// the brain already exists. Visibility must follow the replacement.
+		public void RebindModel(GameObject model)
+		{
+			_model = model;
+			if (_model != null)
+				_model.SetActive(_modelVisibilityHeld || (Runtime != null ? Runtime.CurrentActivity != ResidentActivityType.Home : _deferredModelVisible));
+		}
 
 		private readonly float _moveSpeed;
 

@@ -55,7 +55,7 @@ namespace SushiAndFish.FishingIntegration {
             module.vitals.Died+=()=>{equipped=false;left=previousLeft=right=previousRight=false;module.SetReeling(0);ReleaseTools();recoverAt=Time.time+3;world.Notify(player.OwnerClientId,"被鱼击倒 · 3 秒后可继续使用装备");if(player.IsOwner)player.TryDisableActiveToolForModeChange();};
             aimPosition=player.transform.position+Vector3.up*1.6f;aimForward=player.transform.forward;
         }
-        public void SetEquipped(bool active){equipped=active;if(!active)pendingEquipment=int.MinValue;if(player.IsOwner)Send(active?"equip":"stow",active?equipment:0);if(!active&&module){module.SetReeling(0);module.Abort();ReleaseTools();}}
+        public void SetEquipped(bool active){active=active&&FishingMigration.UsesMigratedFishing(player);equipped=active;if(!active)pendingEquipment=int.MinValue;if(player.IsOwner)Send(active?"equip":"stow",active?equipment:0);if(!active&&module){module.SetReeling(0);module.Abort();ReleaseTools();}}
         public void Send(string action,float value,string target=null){world.SendCommand(this,action,value,target);}
         public void OpenEquipmentPage(){
             if(!equipmentWheel){var candidate=world.gameObject.AddComponent<FishingEquipmentWheel>();if(!candidate.Bind(this)){UnityEngine.Object.Destroy(candidate);world.Notify(player.OwnerClientId,"装备界面尚未准备完成");return;}equipmentWheel=candidate;}
@@ -89,8 +89,8 @@ namespace SushiAndFish.FishingIntegration {
         public void Command(string action,float value,string target){
             if(!world.Server||!module)return;
             if(!float.IsFinite(value))return;
-            if((action=="equip"||action=="weapon")&&(!player.ToolsData.FishingRodUnlocked||module.vitals.Down))return;
-            if(!inputActive&&(action=="left"||action=="right"||action=="reload"||action=="bait"))return;
+            if((action=="equip"||action=="weapon")&&(!FishingMigration.UsesMigratedFishing(player)||!player.ToolsData.FishingRodUnlocked||module.vitals.Down))return;
+            if((!inputActive||!FishingMigration.UsesMigratedFishing(player))&&(action=="left"||action=="right"||action=="reload"||action=="bait"))return;
             if((action=="equip"||action=="weapon")&&value>=0&&!world.OwnsWeapon((int)value)){world.Notify(player.OwnerClientId,"先在平板 · 升级 · 枪械中购买这把枪");return;}
             switch(action){
                 case "buy-weapon":world.BuyWeapon(this,(int)value);break;

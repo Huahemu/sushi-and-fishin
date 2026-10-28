@@ -3165,6 +3165,7 @@ namespace PaperPixelGames.Core.Ai.NPCs
 			CacheAnimatorParameters();
 			RefreshBakedVisualOutlineTargets();
 			gameObject.SetActive(activeSelf);
+			_brain?.RebindModel(gameObject);
 			UnityEngine.Object.Destroy(model);
 			return true;
 		}
