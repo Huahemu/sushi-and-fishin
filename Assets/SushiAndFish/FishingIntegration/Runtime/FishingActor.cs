@@ -79,6 +79,7 @@ namespace SushiAndFish.FishingIntegration {
                 if(module.landingPoint)module.landingPoint.position=player.transform.position+player.transform.forward*1.5f;
             }
             if(!player.IsOwner){if(!world.Server)UpdateLocalVisual();return;}
+            world.TickFreezerInput(this);
             bool allowed=ControlsAllowed;
             if(allowed!=lastAllowed){lastAllowed=allowed;Send("control",allowed?1:0);}
             if(!allowed){if(!world.Server)UpdateLocalVisual();return;}
@@ -108,6 +109,8 @@ namespace SushiAndFish.FishingIntegration {
                 case "restock":module.inventory.RestockBait();world.Notify(player.OwnerClientId,"鱼饵已补充 · 每种至少 8 份");break;
                 case "harvest":world.Harvest(this,target);break;
                 case "deposit":world.DepositHeld(this);break;
+                case "freezer-deposit":if(world.FreezerNear(this))world.DepositHeld(this);break;
+                case "freezer-withdraw":if(world.FreezerNear(this))world.Withdraw(this,target);break;
                 case "withdraw":world.Withdraw(this,target);break;
             }
         }

@@ -84,9 +84,6 @@ public static class InstallNativeDocks
             MakeRamp(access.transform,region.title+" · 水面登岸",low,end-outward*.35f,3.2f);
             report.AppendLine("ISLAND "+i+" deckStart="+start.ToString("F4")+" deckEnd="+end.ToString("F4")+" land="+land[i].ToString("F4"));
         }
-        var mainEnd=mainFrame+mainRotation*Vector3.forward*length;
-        var mainLow=mainEnd+mainRotation*Vector3.forward*9;mainLow.y=-5.6f;
-        MakeRamp(access.transform,"主岛 · 水面登岸",mainLow,mainEnd-mainRotation*Vector3.forward*.35f,3.2f);
         Object.DestroyImmediate(boardTemplate);boardTemplate=null;Object.DestroyImmediate(poleTemplate);poleTemplate=null;
         PrefabUtility.SaveAsPrefabAsset(access,Access);Object.DestroyImmediate(access);
         // Native city and all collision are inspected without saving either scene.
@@ -137,7 +134,7 @@ public static class InstallNativeDocks
         var settings=ArchipelagoSettings.Load();var dock=AssetDatabase.LoadAssetAtPath<GameObject>(Dock);var access=AssetDatabase.LoadAssetAtPath<GameObject>(Access);
         Require(dock&&dock.GetComponentsInChildren<MeshRenderer>(true).Length>20,"Native dock prefab retains the complete original pier geometry");
         Require(dock.GetComponentsInChildren<MonoBehaviour>(true).Length==0&&dock.GetComponentsInChildren<Rigidbody>(true).Length==0,"Static pier contains no copied gameplay, NPC or network simulation");
-        Require(access.transform.childCount==7,"Two native docks, two island paths and three water-entry ramps; restaurant-side temporary dock removed");
+        Require(access.transform.childCount==6,"Two native docks, two island paths and two water-entry ramps; restaurant-side temporary dock removed");
         var all=dock.GetComponentsInChildren<MeshRenderer>(true).Concat(access.GetComponentsInChildren<MeshRenderer>(true)).ToArray();
         Require(all.All(r=>r.sharedMaterials.All(m=>m&&m.shader&&m.shader.isSupported&&!m.shader.name.Contains("Error"))),"Dock and ramp reuse supported original native materials");
         Require(all.All(r=>AssetDatabase.GetAssetPath(r.GetComponent<MeshFilter>().sharedMesh).StartsWith("Assets/Mesh/",StringComparison.Ordinal)),"Every visible pier and ramp mesh comes from the original sushi game assets");

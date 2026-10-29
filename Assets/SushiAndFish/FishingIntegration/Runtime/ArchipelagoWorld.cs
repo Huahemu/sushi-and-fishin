@@ -12,7 +12,7 @@ using UnityEngine.InputSystem;
 namespace SushiAndFish.FishingIntegration {
     [Serializable] public sealed class SailingSnapshot {public Vector3 position,velocity;public Quaternion rotation;public ulong driver=ulong.MaxValue;public Vector2 input;public int relocation;}
     [Serializable] public sealed class SavedBoat {public bool valid;public Vector3 position;public Quaternion rotation;public int berthVersion;}
-    public sealed class ArchipelagoWorld:MonoBehaviour {
+    public sealed partial class ArchipelagoWorld:MonoBehaviour {
         public const int NativeDockBerthVersion=1;
         public static bool UsesLegacyDefaultBerth(SavedBoat saved)=>saved!=null&&saved.valid&&saved.berthVersion<NativeDockBerthVersion&&
             ValidRotation(saved.rotation)&&ValidPosition(saved.position,new Vector3(49.62593f,-3.75f,93.01851f))&&
@@ -53,6 +53,7 @@ namespace SushiAndFish.FishingIntegration {
             if(phase==InputActionPhase.Started){if(player.Interactor.CurrentHeld||player.IsToolActive)world.Notify(player.OwnerClientId,"先收起手中物品和工具，再驾驶船只");else if(!player.CanStartControlAction(PlayerControlAction.ActivateTool))return true;else actor.Send("boat-drive",1);}return true;
         }
         internal void Command(FishingActor actor,string action,Vector3 axes){if(!Server||!actor.player||!Boat)return;
+            if(action=="boat-recall"){Recall(actor);return;}
             if(action=="boat-recover"){if(Time.unscaledTime<recoveryCooldown||Boat.driver!=ulong.MaxValue||Vector3.Distance(actor.player.transform.position,Boat.transform.position)>12||actor.equipped||actor.player.IsToolActive||actor.player.Interactor.CurrentHeld||!actor.player.CanStartControlAction(PlayerControlAction.ActivateTool))return;
                 recoveryCooldown=Time.unscaledTime+3;if(!ArchipelagoBoatSafety.NeedsRecovery(Boat,SeaHeight))return;
                 if(ArchipelagoBoatSafety.TryFind(Settings,Boat.transform.position,Boat.transform.eulerAngles.y,SeaHeight,Boat.transform,out var p,out var q)){RelocateBoat(p,q);world.Notify(actor.player.OwnerClientId,"船已扶正并回到附近开阔水面");world.SaveWorld();}else world.Notify(actor.player.OwnerClientId,"附近没有足够宽敞的水面，请移开船旁障碍");return;
@@ -117,7 +118,7 @@ namespace SushiAndFish.FishingIntegration {
             if(traversal!=null&&traversal.RenderHints(hints))return true;
             if(LookingAtHelm(actor)&&!actor.equipped){hints.RenderSailing(false,true,0,null,Boat.driver==ulong.MaxValue?"空手按 E 驾驶船只":"船只正在被其他玩家驾驶");return true;}return false;}
         bool LookingAtBoat(FishingActor actor){return actor!=null&&actor.Camera&&Boat&&Physics.Raycast(actor.Camera.transform.position,actor.Camera.transform.forward,out var hit,12,~0,QueryTriggerInteraction.Ignore)&&hit.collider.GetComponentInParent<OriginalBoatRig>()==Boat;}
-        public void Dispose(){if(disposed)return;disposed=true;Exit();traversal?.Dispose();traversal=null;var handler=Singleton<InputManager>.Instance?.InputHandler;if(handler!=null){handler.Move-=OnMove;handler.Throw-=OnDrop;}foreach(var p in profiles.Values)if(p.module)p.module.WaterCastEntered-=p.entered;profiles.Clear();}
+        public void Dispose(){if(disposed)return;disposed=true;if(recalling!=null){StopCoroutine(recalling);recalling=null;}Exit();traversal?.Dispose();traversal=null;var handler=Singleton<InputManager>.Instance?.InputHandler;if(handler!=null){handler.Move-=OnMove;handler.Throw-=OnDrop;}foreach(var p in profiles.Values)if(p.module)p.module.WaterCastEntered-=p.entered;profiles.Clear();}
         void OnDestroy(){Dispose();}
     }
 }

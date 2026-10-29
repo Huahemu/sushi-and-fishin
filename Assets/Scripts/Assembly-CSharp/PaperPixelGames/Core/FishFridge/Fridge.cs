@@ -186,6 +186,7 @@ namespace PaperPixelGames.Core.FishFridge
 				}
 				else if (held is DeadFish deadFish)
 				{
+                    if(SushiAndFish.FishingIntegration.FishingMigration.DepositFromNativeFridge(this,interactor))return;
 					ServerAddStockRpc(deadFish.NetworkObject.ToReference(), interactor.NetworkObject.ToReference());
 					PlayInsertSFX();
 				}
@@ -529,6 +530,17 @@ namespace PaperPixelGames.Core.FishFridge
 			deadFish.Weight.Value = value;
 		}
 
+        public bool TryPeekSharedFish(string id,out float weight){weight=0;var stock=FindStock(id);if(!IsServer||stock?.Weights==null||stock.Weights.Count==0)return false;weight=stock.Weights[stock.Weights.Count-1];return true;}
+        public bool TakeSharedFish(string id){if(!TryPeekSharedFish(id,out _))return false;var stock=FindStock(id);stock.Weights.RemoveAt(stock.Weights.Count-1);ServerAdjustRestaurantStock(id,-1);if(_fishVisualMap.TryGetValue(id,out var visual)&&visual)visual.SetStockStateServer(stock.Weights.Count);RemoveStockIfEmpty(stock);return true;}
+        public bool StoreSharedFish(DeadFish fish,Interactor interactor){
+            if(!IsServer||!fish||!fish.IsSpawned||!fish.FishSO||!interactor||interactor.CurrentHeld!=fish||fish.CanHold.Value||fish.OwnerClientId!=interactor.OwnerClientId)return false;
+            string id=fish.FishSO.Id;
+            fish.ServerDeregisterInventoryStock();GetOrCreateStock(id).Weights.Add(fish.Weight.Value);ServerAdjustRestaurantStock(id,1);
+            if(_fishVisualMap.TryGetValue(id,out var visual)&&visual)visual.SetStockStateServer(FindStock(id).Weights.Count);
+            ClientFinalizeAddStockRpc(fish.NetworkObject.ToReference(),base.RpcTarget.Single(interactor.OwnerClientId,RpcTargetUse.Temp));
+            fish.NetworkObject.Despawn();return true;
+        }
+
 		public ushort GetStockCount(string fishId)
 		{
 			if (string.IsNullOrWhiteSpace(fishId))
@@ -540,7 +552,7 @@ namespace PaperPixelGames.Core.FishFridge
 			{
 				return 0;
 			}
-			return (ushort)fridgeStock.Weights.Count;
+			return (ushort)System.Math.Min(ushort.MaxValue,fridgeStock.Weights.Count);
 		}
 
 		private FridgeStock FindStock(string fishId)

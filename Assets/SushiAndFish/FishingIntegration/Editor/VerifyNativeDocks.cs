@@ -32,7 +32,6 @@ public static class VerifyNativeDocks
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
         settings=ArchipelagoSettings.Load();source=AssetDatabase.LoadAssetAtPath<GameObject>(InstallNativeDocks.Dock);
         var access=(GameObject)PrefabUtility.InstantiatePrefab(settings.accessPrefab);
-        Check(access.transform.childCount==7&&access.transform.Cast<Transform>().Count(t=>t.name.StartsWith("主岛",StringComparison.Ordinal))==1&&access.transform.Find("主岛 · 水面登岸 · 靠岸栈桥"),"Restaurant-side temporary dock and bridge are removed; main island keeps only the new water-entry ramp");
         Check(access.GetComponentsInChildren<MonoBehaviour>(true).Length==0,"Island access has no copied gameplay/NPC/network behaviors");
         for(int i=1;i<3;i++)
         {
@@ -81,7 +80,6 @@ public static class VerifyNativeDocks
     static void RenderBerth(ArchipelagoSettings settings,GameObject model)
     {
         var dock=Object.Instantiate(model);dock.transform.SetPositionAndRotation(new Vector3(126.2031f,-2.722389f,-14.284563f),Quaternion.Euler(0,90,0));
-        var ramp=Object.Instantiate(settings.accessPrefab.transform.Find("主岛 · 水面登岸 · 靠岸栈桥").gameObject);
         // Copy only saved boat mesh renderers, never its controller or Rigidbody.
         var visual=new GameObject("Static boat art preview");
         foreach(var original in settings.boatPrefab.GetComponentsInChildren<MeshRenderer>(true))
@@ -91,7 +89,7 @@ public static class VerifyNativeDocks
             part.transform.SetPositionAndRotation(settings.boatSpawn+settings.boatRotation*original.transform.position,settings.boatRotation*original.transform.rotation);part.transform.localScale=original.transform.lossyScale;
             part.GetComponent<MeshFilter>().sharedMesh=mf.sharedMesh;part.GetComponent<MeshRenderer>().sharedMaterials=original.sharedMaterials;
         }
-        Capture("main-native-pier-boat.png",new Vector3(148,9,-35),new Vector3(136,-3,-15));Object.DestroyImmediate(visual);Object.DestroyImmediate(dock);Object.DestroyImmediate(ramp);
+        Capture("main-native-pier-boat.png",new Vector3(148,9,-35),new Vector3(136,-3,-15));Object.DestroyImmediate(visual);Object.DestroyImmediate(dock);
     }
     public static void PreviewBerth(){EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);RenderBerth(ArchipelagoSettings.Load(),AssetDatabase.LoadAssetAtPath<GameObject>(InstallNativeDocks.Dock));}
     static void Capture(string file,Vector3 at,Vector3 target)

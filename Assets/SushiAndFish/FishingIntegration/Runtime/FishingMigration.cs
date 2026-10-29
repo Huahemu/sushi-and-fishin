@@ -37,7 +37,7 @@ namespace SushiAndFish.FishingIntegration {
         static void Boot(){if(Instance)return;var config=MigrationConfig.Load();if(!config||!config.enabled)return;var go=new GameObject("Sushi fishing integration");DontDestroyOnLoad(go);go.AddComponent<FishingMigration>().Config=config;}
         void Awake(){Instance=this;}
         void OnApplicationQuit(){SaveWorld();}
-        void OnDestroy(){SaveWorld();ClearNativeDeaths();ClearWalkCollisions();UnbindWire();if(Instance==this)Instance=null;}
+        void OnDestroy(){ClearFreezers();SaveWorld();ClearNativeDeaths();ClearWalkCollisions();UnbindWire();if(Instance==this)Instance=null;}
         void Update(){
             var current=NetworkManager.Singleton;
             if(!current||!current.IsListening){if(network){SaveWorld();ResetWorld();}return;}
@@ -50,6 +50,7 @@ namespace SushiAndFish.FishingIntegration {
                 if(Time.unscaledTime>=snapshotAt){snapshotAt=Time.unscaledTime+.1f;PublishWorld();}
                 if(Time.unscaledTime>=saveAt){saveAt=Time.unscaledTime+10;SaveWorld();}
             }else TickArchipelago();
+            EnsureFreezers();
             TickWalkCollisions();
         }
         void LateUpdate(){if(Archipelago)Archipelago.LateTick();foreach(var actor in actors.Values)if(actor.player)actor.LateTick();}
@@ -64,6 +65,7 @@ namespace SushiAndFish.FishingIntegration {
         }
         void ResetWorld(){
             ClearNativeDeaths();
+            ClearFreezers();
             var nativeSelection=GetComponent<NativeSpearfishingAccess>();if(nativeSelection)nativeSelection.Cancel();
             ClearWalkCollisions();
             ClearArchipelago();
@@ -99,12 +101,16 @@ namespace SushiAndFish.FishingIntegration {
             if(player&&player.DivingEquipment&&player.DivingEquipment.IsKnocked)return false;
             if(Enabled&&Instance.Archipelago&&Instance.Archipelago.Interact(player,phase))return true;
             if(!Enabled||!player||!player.IsOwner||phase!=InputActionPhase.Started)return false;
-            if(player.ActiveTool&&player.ActiveTool.CapturesInteractInput)return false;
+            if(player.ActiveTool&&player.ActiveTool.CapturesInteractInput&&!UsesMigratedFishing(player))return false;
             var actor=Instance.Local;if(actor==null)return false;
-            var camera=actor.Camera;if(!camera)return false;
-            if(Physics.Raycast(camera.transform.position,camera.transform.forward,out var hit,4,~0,QueryTriggerInteraction.Ignore)){
-                var identity=hit.collider.GetComponentInParent<MigratedCatchIdentity>();
-                if(identity){actor.Send("harvest",1,identity.token);return true;}
+            if(Instance.AimInteraction(actor,out var identity,out var freezer)){
+                if(freezer){if(player.Interactor.CurrentHeld is PaperPixelGames.Core.Ocean.DeadFish)actor.Send("freezer-deposit",1);else FishingFreezerPanel.Open(actor,freezer);return true;}
+                if(identity){
+                    if(Instance.FishSnapshots.TryGetValue(identity.token,out var fish)&&fish.health>0){Instance.Notify(player.OwnerClientId,"活鱼不能拾取 · 先击败它");return true;}
+                    if(player.Interactor.CurrentHeld){Instance.Notify(player.OwnerClientId,"先放下手中物品再拾取鱼");return true;}
+                    if(player.IsToolActive&&!player.TryDisableActiveToolForModeChange()){Instance.Notify(player.OwnerClientId,"请先结束当前抛竿或收线，再拾取鱼");return true;}
+                    actor.SetEquipped(false);actor.Send("harvest",1,identity.token);return true;
+                }
             }
             return false;
         }

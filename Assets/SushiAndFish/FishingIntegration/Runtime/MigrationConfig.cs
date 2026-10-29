@@ -19,6 +19,8 @@ namespace SushiAndFish.FishingIntegration {
     public sealed class MigrationConfig:ScriptableObject {
         public bool enabled=true;
         public GameObject systemPrefab;
+        public GameObject freezerPrefab;public FishFreezerPoint[] freezerPoints;
+        public PaperPixelGames.Core.Tablet.InventoryItemUI nativeInventoryRow;
         public GameObject nativeHintTemplate;
         public TMP_SpriteAsset nativeHintSprites;
         public FishingProfile profile;

@@ -56,7 +56,8 @@ namespace SushiAndFish.FishingIntegration {
         }
         internal void Harvest(FishingActor actor,string token){
             if(!Server||string.IsNullOrEmpty(token)||!catches.TryGetValue(token,out var fish)||!fish||!fish.IsAvailable)return;
-            if((fish.body.worldCenterOfMass-actor.player.transform.position).sqrMagnitude>25)return;
+            if((fish.body.worldCenterOfMass-actor.player.transform.position).sqrMagnitude>49)return;
+            if(actor.player.Interactor.CurrentHeld){Notify(actor.player.OwnerClientId,"先放下手中物品再拾取鱼");return;}
             if(!fish.IsDead){Notify(actor.player.OwnerClientId,"活鱼不能拾取 · 先用鱼枪击败它");return;}
             var binding=Config.Find(fish.definition.originalId);if(binding==null)return;
             if(!convertingCatches.Add(token))return;
@@ -90,22 +91,22 @@ namespace SushiAndFish.FishingIntegration {
             fish.ServerMarkFishBookCatchRegistered();SaveWorld();
         }
         internal void DepositHeld(FishingActor actor){
-            if(!Server)return;var fish=actor.player.Interactor.CurrentHeld as DeadFish;
-            if(!fish){Notify(actor.player.OwnerClientId,"先拿起一条已击败的鱼，再存入鱼仓");return;}
-            var binding=Config.Find(fish.FishId.Value.ToString());
-            RegisterNativePickup(fish,actor.player);string token=string.IsNullOrEmpty(fish.FishingCaptureId)?Guid.NewGuid().ToString("N"):fish.FishingCaptureId;
-            if(SaveData.stock.Any(s=>s.token==token))return;
-            SaveData.stock.Add(new StoredFish{token=token,itemId=fish.FishId.Value.ToString(),weight=fish.Weight.Value});
-            if(binding!=null){var record=SaveData.archive.fish.Find(r=>r.id==binding.definition.originalId);
-                if(record==null){record=new FishingInventory.Record{id=binding.definition.originalId,name=binding.definition.displayName};SaveData.archive.fish.Add(record);}
-                record.count++;if(Config.IsShiny(fish.FishId.Value.ToString()))record.shinyCount++;else record.originalCount++;record.bestWeight=Mathf.Max(record.bestWeight,fish.Weight.Value);}
-            string title=fish.FishSO.LocalizedName;fish.ServerDeregisterInventoryStock();fish.NetworkObject.Despawn();Notify(actor.player.OwnerClientId,"已存入鱼仓 · "+title);SaveWorld();
+            if(!Server||actor==null||!actor.player||actor.IsDefeated)return;
+            var fish=actor.player.Interactor.CurrentHeld as DeadFish;
+            if(!fish){Notify(actor.player.OwnerClientId,"先拿起一条已击败的鱼，再存入冰柜");return;}
+            if(!fish.IsSpawned||fish.OwnerClientId!=actor.player.OwnerClientId||fish.CanHold.Value||!fish.FishSO)return;
+            // The native freezer already persists arbitrary fish IDs and weights.
+            // Its old visual slots are optional presentation, not an item whitelist.
+            if(!MainFishFridge){Notify(actor.player.OwnerClientId,"冰柜正在载入，请稍后再试");return;}
+            RegisterNativePickup(fish,actor.player);string title=fish.FishSO.LocalizedName;
+            if(!MainFishFridge.StoreSharedFish(fish,actor.player.Interactor))return;
+            Notify(actor.player.OwnerClientId,"已存入共享冰柜 · "+title);SaveWorld();
         }
         internal void Withdraw(FishingActor actor,string itemId){
-            if(!Server)return;var stored=SaveData.stock.FirstOrDefault(s=>s.itemId==itemId);if(stored==null)return;
+            if(!Server)return;if(actor.player.Interactor.CurrentHeld){Notify(actor.player.OwnerClientId,"先放下手中物品再取鱼");return;}var stored=SaveData.stock.FirstOrDefault(s=>s.itemId==itemId);float legacyWeight=0;bool legacy=stored==null&&MainFishFridge&&MainFishFridge.TryPeekSharedFish(itemId,out legacyWeight);if(stored==null&&!legacy)return;
             var binding=Config.Find(itemId);var data=Config.database.FindById(itemId) as FishSO;if(!data)return;
-            var native=SpawnNative(data,stored.weight,actor.player.transform.position+actor.player.transform.forward*1.3f+Vector3.up*.7f,Quaternion.identity,stored.token);if(!native)return;
-            native.ServerMarkFishBookCatchRegistered();SaveData.stock.Remove(stored);var r=binding==null?null:SaveData.archive.fish.Find(x=>x.id==binding.definition.originalId);if(r!=null){r.count=Math.Max(0,r.count-1);if(Config.IsShiny(itemId))r.shinyCount=Math.Max(0,r.shinyCount-1);else r.originalCount=Math.Max(0,r.originalCount-1);}
+            var native=SpawnNative(data,legacy?legacyWeight:stored.weight,actor.player.transform.position+actor.player.transform.forward*1.3f+Vector3.up*.7f,Quaternion.identity,legacy?string.Empty:stored.token);if(!native)return;
+            native.ServerMarkFishBookCatchRegistered();if(legacy){if(!MainFishFridge.TakeSharedFish(itemId)){native.NetworkObject.Despawn();return;}}else SaveData.stock.Remove(stored);var r=binding==null?null:SaveData.archive.fish.Find(x=>x.id==binding.definition.originalId);if(!legacy&&r!=null){r.count=Math.Max(0,r.count-1);if(Config.IsShiny(itemId))r.shinyCount=Math.Max(0,r.shinyCount-1);else r.originalCount=Math.Max(0,r.originalCount-1);}
             native.ServerLazyHold(itemId,actor.player.OwnerClientId,new NetworkObjectReference(actor.player.Interactor.NetworkObject),true,true,true,native.transform.position,false);SaveWorld();
         }
     }

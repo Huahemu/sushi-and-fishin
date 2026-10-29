@@ -12,7 +12,7 @@ using UnityEngine.UI;
 namespace SushiAndFish.FishingIntegration {
     public sealed class FishingWarehousePage:MonoBehaviour {
         InventoryItemUI template;Transform original;RectTransform content;ScrollRect scroll;BaseButton open,deposit;bool visible;float refresh;string drawn;
-        public void Bind(InventoryItemUI row,Transform container){template=row;original=container;scroll=container.GetComponentInParent<ScrollRect>();open=FishingTablet.Button(transform,"海钓鱼仓",new Vector2(1,1),new Vector2(-40,-7),new Vector2(74,12),()=>Show(!visible));FishingTablet.Button(transform,"补充鱼饵",new Vector2(1,1),new Vector2(-200,-7),new Vector2(74,12),()=>FishingMigration.Instance.Local?.Send("restock",1));}
+        public void Bind(InventoryItemUI row,Transform container){template=row;original=container;scroll=container.GetComponentInParent<ScrollRect>();FishingTablet.Button(transform,"召回船只",new Vector2(1,1),new Vector2(-280,-7),new Vector2(74,12),()=>FishingMigration.Instance.Local?.Send("boat-recall",1));open=FishingTablet.Button(transform,"海钓鱼仓",new Vector2(1,1),new Vector2(-40,-7),new Vector2(74,12),()=>Show(!visible));FishingTablet.Button(transform,"补充鱼饵",new Vector2(1,1),new Vector2(-200,-7),new Vector2(74,12),()=>FishingMigration.Instance.Local?.Send("restock",1));}
         void OnDisable(){Show(false);}
         void Update(){if(visible&&Time.unscaledTime>=refresh){refresh=Time.unscaledTime+1;Draw();}}
         public void Show(bool show){visible=show;if(original)original.gameObject.SetActive(!show);if(!show){if(content)content.gameObject.SetActive(false);if(deposit)deposit.gameObject.SetActive(false);if(scroll&&original)scroll.content=(RectTransform)original;return;}
