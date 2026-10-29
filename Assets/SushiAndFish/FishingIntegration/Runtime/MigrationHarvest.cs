@@ -26,7 +26,7 @@ namespace SushiAndFish.FishingIntegration {
         }
         public bool SaveWorld(){
             if(!Server||!restored||SavePath==null)return false;
-            if(Archipelago&&Archipelago.Boat)SaveData.boat=new SavedBoat{valid=true,position=Archipelago.Boat.body.position,rotation=Archipelago.Boat.body.rotation};
+            if(Archipelago&&Archipelago.Boat)SaveData.boat=new SavedBoat{valid=true,position=Archipelago.Boat.body.position,rotation=Archipelago.Boat.body.rotation,berthVersion=ArchipelagoWorld.NativeDockBerthVersion};
             var live=new System.Collections.Generic.List<SavedCatch>();
             foreach(var pair in catches){if(!pair.Value||!pair.Value.IsAvailable)continue;var fish=pair.Value;var identity=fish.GetComponent<MigratedCatchIdentity>();live.Add(new SavedCatch{token=pair.Key,fisher=identity?identity.fisher:0,steam=identity?identity.steam:0,species=fish.definition.originalId,health=fish.Health,position=fish.fishing.SavedCatchPosition(fish),rotation=fish.transform.rotation,weight=fish.weight,shiny=fish.IsDrip,reachedShore=fish.HasReachedShore||fish.fishing.IsLanding(fish),seen=fish.ArchiveLifted});}
             // Serialize a separate snapshot. Replacing the restore queue with

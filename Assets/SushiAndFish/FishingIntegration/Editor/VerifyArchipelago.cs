@@ -33,7 +33,7 @@ public static class VerifyArchipelago {
   Check(settings.RegionAt(settings.regions[1].center)==1&&settings.RegionAt(settings.regions[2].center)==2,"Each new island selects its own pool");
   Check(settings.RegionAt(new Vector3(5000,0,5000))==0,"Open water outside both small-island fishing radii uses main-island pool");
   Check(Vector3.Distance(settings.regions[1].center,settings.regions[2].center)>settings.regions[1].fishingRadius+settings.regions[2].fishingRadius,"Small-island fishing zones do not overlap");
-  Check(Vector3.ProjectOnPlane(settings.boatSpawn-settings.regions[0].center,Vector3.up).magnitude<75,"Boat remains beside the sushi restaurant rather than at a remote spawn");
+  Check(Vector3.ProjectOnPlane(settings.boatSpawn-new Vector3(134.14f,-5.22f,-14.28f),Vector3.up).magnitude<15,"Boat starts beside the existing native city pier");
   Check(settings.regions[1].prefab!=settings.regions[2].prefab&&settings.regions.Skip(1).All(r=>r.prefab.GetComponentsInChildren<MeshCollider>().Any(c=>c.sharedMesh)),"Different imported island prefabs both have terrain collision");
   var report=new StringBuilder("海域鱼池与概率（无事件；保留非普通鱼倍率）\n");float previousRare=-1,previousLegend=-1;
   foreach(var region in settings.regions){

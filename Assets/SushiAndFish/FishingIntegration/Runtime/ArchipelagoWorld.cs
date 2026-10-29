@@ -11,8 +11,13 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 namespace SushiAndFish.FishingIntegration {
     [Serializable] public sealed class SailingSnapshot {public Vector3 position,velocity;public Quaternion rotation;public ulong driver=ulong.MaxValue;public Vector2 input;public int relocation;}
-    [Serializable] public sealed class SavedBoat {public bool valid;public Vector3 position;public Quaternion rotation;}
+    [Serializable] public sealed class SavedBoat {public bool valid;public Vector3 position;public Quaternion rotation;public int berthVersion;}
     public sealed class ArchipelagoWorld:MonoBehaviour {
+        public const int NativeDockBerthVersion=1;
+        public static bool UsesLegacyDefaultBerth(SavedBoat saved)=>saved!=null&&saved.valid&&saved.berthVersion<NativeDockBerthVersion&&
+            ValidRotation(saved.rotation)&&ValidPosition(saved.position,new Vector3(49.62593f,-3.75f,93.01851f))&&
+            Vector2.Distance(new Vector2(saved.position.x,saved.position.z),new Vector2(49.62593f,93.01851f))<=9f&&Mathf.Abs(saved.position.y+3.75f)<3;
+
         FishingMigration world;public ArchipelagoSettings Settings{get;private set;}public OriginalBoatRig Boat{get;private set;}public bool Server=>world&&world.Server;public float SeaHeight=>world.SeaHeight;
         internal FishingMigration Service=>world;ArchipelagoWaterTraversal traversal;float recoveryHold=-1,nextRecoveryProbe,recoveryCooldown;bool needsRecovery;int remoteRelocation;
         PPG_Player localDriver;bool oldTrapped,oldInputPause,oldMotorEnabled;Vector3 boardStart,lastBoatPosition;Quaternion lastBoatRotation;float boardAt,nextInput;Vector2 input;int lastRegion=-1;Action consumeNativeLook;
@@ -22,7 +27,7 @@ namespace SushiAndFish.FishingIntegration {
         public void Bind(FishingMigration owner,ArchipelagoSettings settings){world=owner;Settings=settings;
             foreach(var region in settings.regions.Skip(1)){var island=Instantiate(region.prefab,region.center,Quaternion.identity,transform);island.name=region.title;islands.Add(island);}
             if(settings.accessPrefab)Instantiate(settings.accessPrefab,Vector3.zero,Quaternion.identity,transform);
-            var saved=world.SaveData.boat;bool valid=saved!=null&&saved.valid&&ValidPosition(saved.position,settings.boatSpawn)&&ValidRotation(saved.rotation);
+            var saved=world.SaveData.boat;bool valid=saved!=null&&saved.valid&&!UsesLegacyDefaultBerth(saved)&&ValidPosition(saved.position,settings.boatSpawn)&&ValidRotation(saved.rotation);
             var position=valid?saved.position:settings.boatSpawn;var rotation=valid?saved.rotation:settings.boatRotation;
             if(Server&&valid){Physics.SyncTransforms();if((!ArchipelagoBoatSafety.SavedPoseUsable(position,rotation,SeaHeight)||!ArchipelagoBoatSafety.ClearWater(position,rotation,SeaHeight))&&ArchipelagoBoatSafety.TryFind(settings,position,rotation.eulerAngles.y,SeaHeight,null,out var recovered,out var upright)){position=recovered;rotation=upright;}}
             Boat=Instantiate(settings.boatPrefab,position,rotation,transform);Boat.name="How to Fish boat";Boat.Bind(this,Server);lastBoatPosition=Boat.transform.position;lastBoatRotation=Boat.transform.rotation;traversal=new ArchipelagoWaterTraversal(this);
