@@ -1028,6 +1028,14 @@ namespace PaperPixelGames.Core.Ai.NPCs
 			{
 				return false;
 			}
+            // The original ambient restaurant must not bypass an added
+            // friend's existing source body owner or finite activity request.
+            if(SushiAndFish.FriendsLife.FriendResidentBindings.IsOwned(this))
+            {
+                var identity=this.GetComponent<SushiAndFish.FriendsLife.FriendWorldActor>();
+                var runtime=SushiAndFish.FriendsLife.FriendsLifeRuntime.Instance;
+                if(!identity||!runtime||!runtime.Ready||runtime.ActorOf(identity.personId)!=this||!runtime.IsWorldAvailable(identity.personId))return false;
+            }
 			if (Runtime.SystemState == ResidentSystemState.Normal && Runtime.IsAvailable && !Runtime.IsWorking && !Runtime.IsSwimming && !Runtime.IsInteracting && !Runtime.IsInRestaurant)
 			{
 				return !Runtime.HasRestaurantAssignment;

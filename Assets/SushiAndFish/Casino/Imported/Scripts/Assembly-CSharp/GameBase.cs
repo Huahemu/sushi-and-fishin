@@ -10,7 +10,7 @@ using global::TMPro;
 using global::UnityEngine;
 using global::UnityEngine.Events;
 
-public class GameBase : NetworkBehaviour
+public partial class GameBase : NetworkBehaviour
 {
 	[Header("References")]
 	public Transform keypadSpawnPoint;
@@ -259,6 +259,11 @@ public class GameBase : NetworkBehaviour
 
 	protected virtual void OnDisable()
 	{
+		if(NativeHasActiveLease)
+		{
+			NativeRoutineFailed("Original owned machine disabled; retain same pending round without human refund or replay");
+			return;
+		}
 		if (isPlaying)
 		{
 			NetworkSingleton<MoneyManager>.Instance.TryChangeBalance(currentBet, null, ChangeType.Bet);
@@ -345,6 +350,7 @@ public class GameBase : NetworkBehaviour
 			{
 				return;
 			}
+			if (!NativeAllowOriginalHumanStart()) return;
 			if (playerInteract.TryGetComponent<PlayerProfile>(out var component))
 			{
 				interactingPlayer = component;
@@ -361,6 +367,7 @@ public class GameBase : NetworkBehaviour
 			{
 				isGoldenBet = true;
 			}
+			NativeOnOriginalBetAccepted();
 			isPlaying = true;
 			canBet = false;
 			StartGame();
@@ -412,6 +419,8 @@ public class GameBase : NetworkBehaviour
 		}
 		else
 		{
+			using var nativeScope=NativePayoutScope();
+			using var nativeCommit=NativeHasActiveLease?SushiAndFish.FriendsLife.FriendsEconomyService.Instance.DeferExternalCommit():null;
 			if (!interactingPlayer.TryGetComponent<PlayerBuff>(out var component))
 			{
 				return;
@@ -455,14 +464,18 @@ public class GameBase : NetworkBehaviour
 			}
 			if (num4 > 0)
 			{
-				NetworkSingleton<MoneyManager>.Instance.TryChangeBalance(num4, interactingPlayer, changeType);
+				bool paid=NetworkSingleton<MoneyManager>.Instance.TryChangeBalance(num4, interactingPlayer, changeType);
+				if(NativeHasActiveLease&&!paid)throw new InvalidOperationException("Original native payout wallet commit refused");
 			}
+			if(NativeHasActiveLease&&num4==0&&!NetworkSingleton<MoneyManager>.Instance.TryChangeBalance(0,interactingPlayer,changeType))throw new InvalidOperationException("Native zero result receipt refused");
+			if(!NativeRecordSourceResult(bet,num4,num>1.0,num2>0.0,num3>0.0,gameSpecificData))
 			NetworkSingleton<GameResultsManager>.Instance.RegisterResult(bet, num4, interactingPlayer, gameType, base.transform.position, num > 1.0, num2 > 0.0, num3 > 0.0, gameSpecificData);
-			if ((bool)NetworkSingleton<AnalyticsManager>.Instance && (bool)interactingPlayer && !Application.isEditor)
+			if (!NativeHasActiveLease && (bool)NetworkSingleton<AnalyticsManager>.Instance && (bool)interactingPlayer && !Application.isEditor)
 			{
 				NetworkSingleton<AnalyticsManager>.Instance.SendAnalytics(this, interactingPlayer.playerName, bet, (long)Math.Round((double)bet * multiplier));
 			}
 			RpcEndGameFeedBacks(multiplier);
+			NativeOnOriginalPayoutComplete();
 		}
 	}
 

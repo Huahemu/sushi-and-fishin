@@ -33,7 +33,11 @@ namespace SushiAndFish.ResidentialIsland
             var casino=ParkCasinoIntegration.Instance;
             if(casino&&casino.Ready&&casino.ModuleRoot)
             {
-                var bounds=new Bounds(new Vector3(-101,3,-35),new Vector3(32,1,42));
+                // Ground-level footprint of the casino where it stands in the park
+                // (the elevated roof and signs are left out).
+                var park=casino.CurrentFloor==0?casino.ModuleRoot:casino.permanentExterior?casino.permanentExterior.transform:null;
+                var bounds=new Bounds(casino.parkOrigin,new Vector3(20,1,20));bool any=false;
+                if(park)foreach(var r in park.GetComponentsInChildren<Renderer>())if(r.bounds.min.y<casino.parkOrigin.y+1.2f&&r.bounds.size.x<200){if(any)bounds.Encapsulate(r.bounds);else bounds=r.bounds;any=true;}
                 var item=new HousingBuildingInfo{id="casino",title="赌场",rect=Rect.MinMaxRect(bounds.min.x,bounds.min.z,bounds.max.x,bounds.max.z)};
                 var floors=casino.ModuleRoot.GetComponentsInChildren<CasinoFloor>(true);
                 for(int i=0;i<=5;i++)

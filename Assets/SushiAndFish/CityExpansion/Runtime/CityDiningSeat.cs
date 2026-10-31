@@ -15,6 +15,7 @@ namespace SushiAndFish.CityExpansion
         public ResidentController Resident {get;private set;}
         Collider interactionCollider;
         bool previousOccupied;
+        string residentReservationKey;
         public bool IsFree=>Area&&Area.IsSpawned&&!Area.IsOccupied&&!Resident;
         void Awake(){Area=GetComponent<EmoteArea>();interactionCollider=GetComponent<Collider>();}
         void Update()
@@ -29,15 +30,18 @@ namespace SushiAndFish.CityExpansion
         public bool TryReserve(ResidentController resident)
         {
             if(!IsFree||!resident||!Area.IsServer)return false;
+            string token="town-meal/"+System.Guid.NewGuid().ToString("N");
+            if(!Area.TryReserveForResident(token))return false;
             Resident=resident;
-            Area.ServerChangeSomeoneUsingRpc(true);
+            residentReservationKey=token;
             return true;
         }
         public void Release(ResidentController resident)
         {
             if(Resident!=resident)return;
             Resident=null;
-            if(Area&&Area.IsSpawned&&Area.IsServer)Area.ServerChangeSomeoneUsingRpc(false);
+            if(Area)Area.ReleaseResidentReservation(residentReservationKey);
+            residentReservationKey=null;
         }
     }
 }

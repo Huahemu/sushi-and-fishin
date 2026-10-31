@@ -39,7 +39,9 @@ namespace SushiAndFish.Casino
         }
         void LateUpdate()
         {
-            bool next=casino&&casino.Ready&&casino.CurrentFloor>0;
+            // Only a host actually on the native floor uses the source sky;
+            // the shared map may stay there after stuck recovery/NPC rides.
+            bool next=casino&&casino.HostOnNativeFloor;
             if(next==inside)return;
             inside=next;
             if(interiorRenderer>=0)target.GetUniversalAdditionalCameraData().SetRenderer(inside?interiorRenderer:originalRenderer);

@@ -2376,6 +2376,10 @@ namespace PaperPixelGames.Core.Restaurant
 			{
 				return;
 			}
+			if (!SushiAndFish.FriendsLife.FriendsSushiDeliveryGate.BeforeDelivery(this, _seatId, ResidentRestaurantTargetType.ConveyorTable, 0, -1, networkObject.NetworkObjectId, () => Mathf.Max(0, (TabletNetworkHandler.Instance != null) ? TabletNetworkHandler.Instance.GetEffectiveRecipePrice(dish.RuntimeRecipeIdentityId, dish.RuntimeDishPrice) : dish.RuntimeDishPrice)))
+			{
+				return;
+			}
 			_isClaimingDish = true;
 			try
 			{

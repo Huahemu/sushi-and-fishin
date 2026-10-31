@@ -283,7 +283,7 @@ namespace PaperPixelGames.Framework.Input
 			{
 				return;
 			}
-			foreach (UnityAction<T> item in action.GetInvocationList().Cast<UnityAction<T>>())
+			foreach (UnityAction<T> item in action.GetInvocationList())
 			{
 				try
 				{
@@ -302,7 +302,7 @@ namespace PaperPixelGames.Framework.Input
 			{
 				return;
 			}
-			foreach (UnityAction<T1, T2> item in action.GetInvocationList().Cast<UnityAction<T1, T2>>())
+			foreach (UnityAction<T1, T2> item in action.GetInvocationList())
 			{
 				try
 				{
@@ -321,7 +321,7 @@ namespace PaperPixelGames.Framework.Input
 			{
 				return;
 			}
-			foreach (UnityAction<T1, T2, T3> item in action.GetInvocationList().Cast<UnityAction<T1, T2, T3>>())
+			foreach (UnityAction<T1, T2, T3> item in action.GetInvocationList())
 			{
 				try
 				{

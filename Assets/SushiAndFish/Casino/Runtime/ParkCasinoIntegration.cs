@@ -67,6 +67,27 @@ namespace SushiAndFish.Casino
         FMODUnity.RuntimeManager ownedAudioManager;
         Scene hostScene;
         bool followHost;
+        bool hostFollowsSharedFloor;
+        // The host renders/plays a native floor only while it actually rode
+        // the shared map there. Stuck recovery or an NPC-only ride leaves the
+        // host on the island with the source interior environment disabled.
+        public bool HostOnNativeFloor => Ready && CurrentFloor != 0 && hostFollowsSharedFloor;
+        bool HostDetached => CurrentFloor != 0 && !hostFollowsSharedFloor;
+        readonly List<Bounds> parkLobbyBounds = new List<Bounds>();
+        float hostFarSince = -1f, nextLobbyRecall;
+        string lobbyRecallWait;
+        const float NativeMapDetachDistance = 2000f;
+        public bool HostUsesCurrentNativeMap
+        {
+            get
+            {
+                if(!Ready||!HostPlayer||!ModuleRoot)return false;
+                if(Vector3.Distance(HostPlayer.transform.position,ModuleRoot.position)>200)return false;
+                return nativeLobbyRegions.Any(c=>c&&c.bounds.Contains(HostPlayer.transform.position+Vector3.up*.5f))||
+                    Physics.RaycastAll(HostPlayer.transform.position+Vector3.up,Vector3.down,2f,~0,QueryTriggerInteraction.Ignore)
+                    .Any(h=>h.collider&&h.collider.transform.IsChildOf(ModuleRoot));
+            }
+        }
         bool releasingInteraction;
         bool releasingUse;
         bool releasingThrow;
@@ -136,7 +157,7 @@ namespace SushiAndFish.Casino
             while (!Ready) { SuppressOriginalHUD(); yield return null; }
         }
 
-        bool HostInputAvailable => HostPlayer && Singleton<InputManager>.Instance && Singleton<InputManager>.Instance.InputHandler &&
+        bool HostInputAvailable => (CurrentFloor==0||hostFollowsSharedFloor) && HostPlayer && Singleton<InputManager>.Instance && Singleton<InputManager>.Instance.InputHandler &&
             Singleton<InputManager>.Instance.InputHandler.GameplayInputEnabled &&
             !HostPlayer.IsTabletActive && !HostPlayer.IsToolActive && !HostPlayer.Interactor.IsHolding && !HostPlayer.Interactor.IsUsing;
 
@@ -227,12 +248,16 @@ namespace SushiAndFish.Casino
                 pose.actor.transform.localPosition=pose.position;pose.actor.transform.localRotation=pose.rotation;
             }
             Physics.SyncTransforms();
+            // Ground lobby volume at its park pose; used while the shared map
+            // is on a native floor and the island only shows the exterior.
+            parkLobbyBounds.Clear();
+            foreach(var region in nativeLobbyRegions)if(region&&region.enabled&&region.bounds.size.sqrMagnitude>0)parkLobbyBounds.Add(region.bounds);
             followHost = true;
             Ready = true;
             SceneManager.SetActiveScene(hostScene);
             SuppressOriginalHUD();
             SynchronizeWallet();
-            Debug.Log("PARK_CASINO_READY floors=0..5 gold=" + WholeCoins + " buttons=" + buttons.Count);
+            Debug.Log("PARK_CASINO_READY floors=0..5 gold=" + WholeCoins + " buttons=" + buttons.Count + " parkLobbyRegions=" + parkLobbyBounds.Count);
         }
 
         public void RegisterCasinoButtons()
@@ -254,10 +279,28 @@ namespace SushiAndFish.Casino
             if (!Ready || !ModuleRoot) return;
             var pointInMap = ModuleRoot.InverseTransformPoint(HostPlayer.transform.position);
             var yaw = worldCamera.transform.eulerAngles.y-ModuleRoot.eulerAngles.y;
+            // A host that already left the native map (stuck recovery) is not
+            // carried by later original transfers, e.g. the casino day end.
+            bool detached = HostDetached;
             CurrentFloor = destination;
+            hostFollowsSharedFloor=!detached&&SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.IncludesOriginalHumans;
             ApplyMapPose();
-            HostPlayer.TeleportPlayer(ModuleRoot.TransformPoint(pointInMap), Quaternion.Euler(0, yaw+ModuleRoot.eulerAngles.y, 0), true);
-            HostPlayer.FirstPersonCharacter.SetVelocity(Vector3.zero);
+            hostFarSince=-1f;
+            if(hostFollowsSharedFloor)
+            {
+                HostPlayer.TeleportPlayer(ModuleRoot.TransformPoint(pointInMap), Quaternion.Euler(0, yaw+ModuleRoot.eulerAngles.y, 0), true);
+                HostPlayer.FirstPersonCharacter.SetVelocity(Vector3.zero);
+            }
+            else if(destination==0&&HostInParkLobby())
+            {
+                // The island exterior copy has no collision. Put a host who
+                // called the map back onto the returned lobby floor.
+                var from=HostPlayer.transform.position+Vector3.up*2f;
+                foreach(var hit in Physics.RaycastAll(from,Vector3.down,4f,~0,QueryTriggerInteraction.Ignore).OrderBy(h=>h.distance))
+                    if(hit.collider&&hit.collider.transform.IsChildOf(ModuleRoot)&&hit.normal.y>.7f)
+                    {if(hit.point.y>HostPlayer.transform.position.y+.01f){HostPlayer.TeleportPlayer(hit.point,true);HostPlayer.FirstPersonCharacter.SetVelocity(Vector3.zero);}break;}
+            }
+            SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.OnOriginalMapPoseChanged(ModuleRoot,destination);
             SyncProxy();
             Debug.Log("PARK_CASINO_MAP_SWITCH floor=" + destination + " nativeScale=" + CurrentScale);
         }
@@ -284,13 +327,13 @@ namespace SushiAndFish.Casino
         {
             // Bootstrap also positions its logical player. It must not move a
             // town player to the casino on startup.
-            if (!followHost || !Ready) return;
+            if (!followHost || !Ready || HostDetached) return;
             HostPlayer.TeleportPlayer(point - Vector3.up * (.4f * CurrentScale), true);
             HostPlayer.FirstPersonCharacter.SetVelocity(Vector3.zero);
         }
         void OnOriginalRotate(Vector2 rotation)
         {
-            if (!followHost || !Ready) return;
+            if (!followHost || !Ready || HostDetached) return;
             HostPlayer.FirstPersonCharacter.TeleportRotation(Quaternion.Euler(0, rotation.x, 0));
             HostPlayer.FirstPersonCharacter.PitchInstant(rotation.y);
         }
@@ -305,6 +348,7 @@ namespace SushiAndFish.Casino
         {
             if (!Ready || !proxy) return;
             CasinoHostRepair.ProtectHostUI(HostPlayer);
+            ObserveHostOutsideNativeMap();
             if(HostInputAvailable && Mouse.current!=null && Mouse.current.leftButton.wasPressedThisFrame && LogicInteractor.TargetInteractable!=null){InputEvents.UpdateInteract(true);releasingInteraction=true;}
             if(Mouse.current!=null && Mouse.current.leftButton.wasReleasedThisFrame && releasingInteraction){InputEvents.UpdateInteract(false);releasingInteraction=false;}
             SyncProxy();
@@ -321,20 +365,68 @@ namespace SushiAndFish.Casino
             SyncProxy();
             foreach(var pose in attendantTransforms)if(pose.target){pose.target.localPosition=pose.position;pose.target.localRotation=pose.rotation;}
         }
+        // Stuck recovery (PPG_Player.StuckSave) teleports the host to the
+        // island spawn while the single shared map stays on a native floor.
+        // The host then no longer follows that floor. Entering the island
+        // lobby calls the original elevator back to Ground through the same
+        // transaction guards as an NPC ride (rounds settled, passengers back
+        // in the cab), so the lobby again has the original cab.
+        void ObserveHostOutsideNativeMap()
+        {
+            if(CurrentFloor==0)return;
+            if(hostFollowsSharedFloor)
+            {
+                bool far=(HostPlayer.transform.position-ModuleRoot.position).sqrMagnitude>NativeMapDetachDistance*NativeMapDetachDistance;
+                if(!far){hostFarSince=-1f;return;}
+                if(hostFarSince<0f){hostFarSince=Time.unscaledTime;return;}
+                if(Time.unscaledTime-hostFarSince<.5f)return;
+                hostFollowsSharedFloor=false;hostFarSince=-1f;
+                UpdateCameraLayers();
+                Debug.Log("PARK_CASINO_HOST_LEFT_NATIVE_FLOOR floor="+CurrentFloor);
+            }
+            if(Time.unscaledTime<nextLobbyRecall||!HostInParkLobby())return;
+            nextLobbyRecall=Time.unscaledTime+1f;
+            if(!NetworkSingleton<ElevatorManager>.TryGetInstance(out var elevator))return;
+            if(SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.TryBeginHostLobbyRecall(elevator,out var reason))
+                Debug.Log("PARK_CASINO_LOBBY_RECALL from="+CurrentFloor);
+            else if(reason!=lobbyRecallWait)Debug.Log("PARK_CASINO_LOBBY_RECALL_WAIT "+reason);
+            lobbyRecallWait=reason;
+        }
+        bool HostInParkLobby()
+        {
+            var p=HostPlayer.transform.position+Vector3.up*.5f;
+            if(parkLobbyBounds.Count==0){var d=p-parkOrigin;d.y=0;return d.sqrMagnitude<12f*12f;}
+            foreach(var b in parkLobbyBounds)if(b.Contains(p))return true;
+            return false;
+        }
         void UpdateCameraLayers()
         {
             if(!worldCamera||!HostPlayer)return;
-            bool inside=CurrentFloor!=0||nativeLobbyRegions.Any(c=>c&&c.bounds.Contains(HostPlayer.transform.position+Vector3.up*.5f));
+            bool inside=CurrentFloor!=0&&hostFollowsSharedFloor||nativeLobbyRegions.Any(c=>c&&c.bounds.Contains(HostPlayer.transform.position+Vector3.up*.5f));
             // The host changes these two bits for third person seating,
             // emotes and first person hands. Preserve its current choice.
             int dynamicBits=worldCamera.cullingMask&hostDynamicCameraLayers;
             worldCamera.cullingMask=((inside?casinoCameraMask:exteriorCameraMask)&~hostDynamicCameraLayers)|dynamicBits;
         }
 
+        // The suppressed hierarchies are walked once a second; between walks
+        // only the components found by the last walk are re-disabled. Walking
+        // every manager and the whole casino module cost ~4-5 ms per frame.
+        readonly List<Behaviour> hudBehaviours = new List<Behaviour>();
+        readonly List<UnityEngine.UI.Graphic> hudGraphics = new List<UnityEngine.UI.Graphic>();
+        float nextHudWalk;
         void SuppressOriginalHUD()
         {
+            if (Time.unscaledTime >= nextHudWalk) { nextHudWalk = Time.unscaledTime + 1f; WalkOriginalHUD(); return; }
+            foreach (var behaviour in hudBehaviours) if (behaviour && behaviour.enabled) behaviour.enabled = false;
+            foreach (var graphic in hudGraphics) if (graphic && graphic.raycastTarget) graphic.raycastTarget = false;
+        }
+        void WalkOriginalHUD()
+        {
+            hudBehaviours.Clear(); hudGraphics.Clear();
             var local = MonoSingleton<LocalManager>.Instance;
-            if (local) { HideCanvases(local.gameObject);CasinoHostRepair.ProtectHostEnvironment(local.gameObject); }
+            if (local) { HideCanvases(local.gameObject);CasinoHostRepair.ProtectHostEnvironment(local.gameObject);
+                foreach (var volume in local.GetComponentsInChildren<UnityEngine.Rendering.Volume>(true)) if (volume.name == "PP_MainGame") hudBehaviours.Add(volume); }
             if (NetworkSingleton<GameUI>.TryGetInstance(out var ui)) HideCanvases(ui.gameObject);
             if (NetworkSingleton<GameManager>.TryGetInstance(out var gameManager)) HideCanvases(gameManager.gameObject);
             // DayEnd and other manager overlays are outside LocalManager and
@@ -342,19 +434,19 @@ namespace SushiAndFish.Casino
             // on the host's world-space tablet even while no casino UI is shown.
             if(Bootstrap && Bootstrap.HostSupportInstance)HideCanvases(Bootstrap.HostSupportInstance);
             foreach (var root in ModuleRoot ? ModuleRoot.GetComponentsInChildren<Canvas>(true) : Array.Empty<Canvas>())
-                if (root.renderMode != RenderMode.WorldSpace && !(root.worldCamera&&root.worldCamera.targetTexture)) { root.enabled = false; suppressedCanvases.Add(root); }
+                if (root.renderMode != RenderMode.WorldSpace && !(root.worldCamera&&root.worldCamera.targetTexture)) { root.enabled = false; suppressedCanvases.Add(root); hudBehaviours.Add(root); }
         }
         void HideCanvases(GameObject root)
         {
-            foreach(var camera in root.GetComponentsInChildren<Camera>(true))camera.enabled=false;
-            foreach(var listener in root.GetComponentsInChildren<AudioListener>(true))listener.enabled=false;
-            foreach(var system in root.GetComponentsInChildren<UnityEngine.EventSystems.EventSystem>(true))system.enabled=false;
-            foreach(var module in root.GetComponentsInChildren<UnityEngine.EventSystems.BaseInputModule>(true))module.enabled=false;
+            foreach(var camera in root.GetComponentsInChildren<Camera>(true)){camera.enabled=false;hudBehaviours.Add(camera);}
+            foreach(var listener in root.GetComponentsInChildren<AudioListener>(true)){listener.enabled=false;hudBehaviours.Add(listener);}
+            foreach(var system in root.GetComponentsInChildren<UnityEngine.EventSystems.EventSystem>(true)){system.enabled=false;hudBehaviours.Add(system);}
+            foreach(var module in root.GetComponentsInChildren<UnityEngine.EventSystems.BaseInputModule>(true)){module.enabled=false;hudBehaviours.Add(module);}
             foreach (var canvas in root.GetComponentsInChildren<Canvas>(true))
                 if (canvas.renderMode != RenderMode.WorldSpace) {
-                    canvas.enabled = false; suppressedCanvases.Add(canvas);
-                    foreach(var raycaster in canvas.GetComponents<UnityEngine.UI.GraphicRaycaster>())raycaster.enabled=false;
-                    foreach(var graphic in canvas.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))graphic.raycastTarget=false;
+                    canvas.enabled = false; suppressedCanvases.Add(canvas); hudBehaviours.Add(canvas);
+                    foreach(var raycaster in canvas.GetComponents<UnityEngine.UI.GraphicRaycaster>()){raycaster.enabled=false;hudBehaviours.Add(raycaster);}
+                    foreach(var graphic in canvas.GetComponentsInChildren<UnityEngine.UI.Graphic>(true)){graphic.raycastTarget=false;hudGraphics.Add(graphic);}
                 }
         }
         void UpdateHostHint()

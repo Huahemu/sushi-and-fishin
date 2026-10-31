@@ -91,7 +91,11 @@ public class MoneyManager : NetworkSingleton<MoneyManager>
 		}
         if (CasinoRuntimeContext.Wallet != null)
         {
-            if (amount == 0 || !CasinoRuntimeContext.Wallet.TryChangeCoins(amount, out long actualBalance)) return false;
+            bool npcActor = SushiAndFish.FriendsLife.ActorWalletRouter.IsNpcInvocation;
+            if ((!npcActor && amount == 0) || !CasinoRuntimeContext.Wallet.TryChangeCoins(amount, out long actualBalance)) return false;
+            // A native NPC round owns a personal wallet. Human island balances,
+            // progression and their UI keep the original source branch below.
+            if (npcActor) return true;
             HostSynchronizeBalance(actualBalance);
             OnBalanceChanged?.Invoke(new BalanceChangeData(amount, changer, changeType));
             RpcInvokeBalanceChanged(balance, amount, changer, changeType);
@@ -213,6 +217,8 @@ public class MoneyManager : NetworkSingleton<MoneyManager>
 			Debug.LogWarning("[Server] function 'System.Boolean MoneyManager::TryChangeTicketBalance(System.Int64)' called when server was not active");
 			return default;
 		}
+        if (SushiAndFish.FriendsLife.ActorWalletRouter.IsNpcInvocation)
+            return SushiAndFish.FriendsLife.ActorWalletRouter.TryChangeNativeTickets(amount, out _);
         if (CasinoRuntimeContext.Wallet != null)
         {
             if (amount == 0 || !CasinoRuntimeContext.Wallet.TryChangeCoins(amount, out long actualBalance)) return false;

@@ -11,6 +11,7 @@ public class GameStamp : NetworkBehaviour
 	[Tooltip("The casino game prefab to spawn. Must have a GameBase component.")]
 	[SerializeField]
 	private GameObject gamePrefab;
+	public GameObject AssignedGamePrefab => gamePrefab;
 
 	[Header("Floor Reference")]
 	[Tooltip("The casino floor this game belongs to. Used to set the casinoLevel on spawned games.")]
@@ -119,6 +120,7 @@ public class GameStamp : NetworkBehaviour
 				componentInChildren.NetworkcasinoLevel = floor.floorIndex;
 			}
 		}
+		SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTargetDirectory.BindOriginalGame(this,prefab,gameObject);
 		StartCoroutine(SetParentHierarchyAfterDelay(gameObject));
 	}
 

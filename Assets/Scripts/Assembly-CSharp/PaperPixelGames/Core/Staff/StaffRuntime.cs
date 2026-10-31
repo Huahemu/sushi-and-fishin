@@ -115,6 +115,14 @@ namespace PaperPixelGames.Core.Staff
 			return reservations.IsReservedByOther("item:" + itemId, employee);
 		}
 
+        // Exact original employee body registry for the friend adapter.
+        public bool TryGetNpc(int employeeId,out StaffNpc npc)
+        {
+            npc=null;
+            if(!workers.TryGetValue(employeeId,out var worker)||!worker.Npc||!worker.Npc.IsSpawned)return false;
+            npc=worker.Npc;return true;
+        }
+
 		public bool CanSpawn(out string reason, StaffRole role = StaffRole.Stocker)
 		{
 			reason = StaffText.Get("missing_workplace");
@@ -224,6 +232,12 @@ namespace PaperPixelGames.Core.Staff
 							pending.Remove(num3);
 							continue;
 						}
+						// A friend employee between shifts keeps its team entry but has no body.
+						if (SushiAndFish.FriendsLife.FriendJobs.OffShift(num3))
+						{
+							pending.Remove(num3);
+							continue;
+						}
 						if (CanSpawn(out var _, employee.Role))
 						{
 							pending.Remove(num3);
@@ -267,6 +281,11 @@ namespace PaperPixelGames.Core.Staff
 						Remove(worker);
 						pending.Add(employee2.EmployeeId);
 						continue;
+					}
+					// Off shift a friend employee walks out like a departure; its team entry stays.
+					if (SushiAndFish.FriendsLife.FriendJobs.OffShift(worker.Id))
+					{
+						employee2.Departure = StaffDeparture.Fired;
 					}
 					nextWorkerTick = Mathf.Max(Time.time, nextWorkerTick + num / (float)Mathf.Max(1, workers.Count));
 					float num4 = Time.time - worker.LastTick;
@@ -887,6 +906,7 @@ namespace PaperPixelGames.Core.Staff
 
 		private void Remove(Worker worker)
 		{
+			SushiAndFish.FriendsLife.FriendsEconomyService.Instance?.ObserveNativeStaffRemoval(worker.Id, worker.Npc);
 			StaffWorkplaceRegistry.Instance?.ReleaseWaitingPoint(worker.Id);
 			worker.Prep?.Dispose();
 			worker.Chef?.Dispose();

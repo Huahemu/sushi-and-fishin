@@ -165,6 +165,7 @@ public class ObjectStamp : NetworkBehaviour
 		}
 		GameObject gameObject = Object.Instantiate(prefab, position, rotation);
 		gameObject.transform.localScale = scale;
+		SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTargetDirectory.BindOriginalCluster(this,prefab,gameObject);
 		NetworkServer.Spawn(gameObject);
 		foreach (Transform item in gameObject.transform)
 		{

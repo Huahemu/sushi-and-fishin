@@ -335,6 +335,7 @@ public class StampManager : NetworkSingleton<StampManager>
 		}
 		int successfulQuota = NetworkSingleton<GameManager>.Instance.successfulQuota;
 		int currentSeed = NetworkSingleton<SeededRandomManager>.Instance.CurrentSeed;
+		SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTargetDirectory.BeginOriginalAssignment(currentSeed,successfulQuota);
 		Dictionary<CasinoFloor, List<ObjectStamp>> dictionary = new Dictionary<CasinoFloor, List<ObjectStamp>>();
 		foreach (ObjectStamp allStamp in allStamps)
 		{
@@ -384,6 +385,7 @@ public class StampManager : NetworkSingleton<StampManager>
 				GameObject gameObject = list2[index2];
 				string positionKey = GetPositionKey(position, key);
 				_preAssignedGames[positionKey] = gameObject;
+				SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTargetDirectory.RecordOriginalAssignment(list3[num2],gameObject,currentSeed,successfulQuota);
 				if (logStampAssignments)
 				{
 					UnityEngine.Debug.Log($"[StampManager] Floor {key.floorIndex} stamp at {position} -> {gameObject.name} (key: {positionKey}, index: {num2})");

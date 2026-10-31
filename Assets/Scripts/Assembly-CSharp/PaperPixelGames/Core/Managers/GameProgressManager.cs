@@ -303,6 +303,19 @@ namespace PaperPixelGames.Core.Managers
 				CompassStepIndex = _restaurantManager.CurrentCompassTargetStepIndex
 			};
 			_progressionManager?.WriteToSave(gameProgressData);
+            // Preserve an existing anchor if fishing has not yet restored this slot.
+            var fishingSaveManager = Singleton<SaveManager>.Instance;
+            if (fishingSaveManager && fishingSaveManager.TryGetCurrentSaveSlot(out var fishingSlot) && fishingSlot.GameProgress != null)
+            {
+                gameProgressData.FishingWeaponsAnchored = fishingSlot.GameProgress.FishingWeaponsAnchored;
+                gameProgressData.FishingWeaponsMask = fishingSlot.GameProgress.FishingWeaponsMask;
+            }
+            var fishingWorld = SushiAndFish.FishingIntegration.FishingMigration.Instance;
+            if (fishingWorld && fishingWorld.TryCaptureNativeWeapons(out var fishingWeaponsMask))
+            {
+                gameProgressData.FishingWeaponsAnchored = true;
+                gameProgressData.FishingWeaponsMask = fishingWeaponsMask;
+            }
 			return gameProgressData;
 		}
 

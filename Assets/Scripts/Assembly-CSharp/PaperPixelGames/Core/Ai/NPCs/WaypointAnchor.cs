@@ -58,6 +58,17 @@ namespace PaperPixelGames.Core.Ai.NPCs
 		public WayPointIndex Index => _index;
 
 		public bool UseAuthoredPose => _useAuthoredPose;
+        public float ActivitySampleRadius => Mathf.Max(.05f,_sampleRadius);
+        public float ActivityVerticalOffset => _verticalOffset;
+        public bool TryGetActivityApproach(NavMeshAgent actual,out Vector3 approach,out Vector3 authoredPose)
+        {
+            approach=default;authoredPose=transform.position;if(!actual)return false;
+            var filter=new NavMeshQueryFilter{agentTypeID=actual.agentTypeID,areaMask=actual.areaMask&_areaMask};
+            if(!NavMesh.SamplePosition(transform.position,out var hit,ActivitySampleRadius,filter)&&
+                (Mathf.Approximately(_verticalOffset,0)||!NavMesh.SamplePosition(transform.position-Vector3.up*_verticalOffset,out hit,ActivitySampleRadius,filter)))return false;
+            approach=hit.position;authoredPose=_useAuthoredPose?transform.position:ApplyOffset(hit.position);return true;
+        }
+
 
 		public string GlobalKey => Category.ToString() + "_" + _index;
 

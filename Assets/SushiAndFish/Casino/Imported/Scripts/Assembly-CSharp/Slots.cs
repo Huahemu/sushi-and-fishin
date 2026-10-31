@@ -92,7 +92,7 @@ public class Slots : GameBase
 			}
 			case 1:
 				_003C_003E1__state = -1;
-				slots.StartCoroutine(slots.EndGameRoutine());
+				slots.StartCoroutine(slots.NativeScopeRoutine(slots.EndGameRoutine(),"slots-result"));
 				return false;
 			}
 		}
@@ -160,7 +160,7 @@ public class Slots : GameBase
 			return;
 		}
 		base.StartGame();
-		StartCoroutine(SpinReelsCoroutine());
+		StartCoroutine(NativeScopeRoutine(SpinReelsCoroutine(),"slots-spin"));
 	}
 
 	[IteratorStateMachine(typeof(_003CSpinReelsCoroutine_003Ed__14))]

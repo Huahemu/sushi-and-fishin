@@ -10,6 +10,9 @@ namespace PaperPixelGames.Core.SaveSystem
 
         public string ExactGoldStorage = "";
         public string TownDiningLedger = "";
+        // Co-saved with the wallet; absent in legacy saves until first capture.
+        public bool FishingWeaponsAnchored;
+        public int FishingWeaponsMask;
 
 		public int ScrapBalance;
 

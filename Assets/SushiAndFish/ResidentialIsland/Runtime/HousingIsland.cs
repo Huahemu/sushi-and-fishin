@@ -42,6 +42,7 @@ namespace SushiAndFish.ResidentialIsland
             var root=new GameObject("ResidentialIslandUpdate");DontDestroyOnLoad(root);root.AddComponent<HousingIsland>();
         }
         void Awake(){Instance=this;Catalog=Resources.Load<HousingCatalog>("Housing/Catalog");StartCoroutine(Watch());}
+        Transform reservedMarker;float nextMapScan;
         IEnumerator Watch()
         {
             while(true)
@@ -53,16 +54,23 @@ namespace SushiAndFish.ResidentialIsland
                     if(!nm.NetworkConfig.Prefabs.Contains(Catalog.nativeSeatPrefab))nm.AddNetworkPrefab(Catalog.nativeSeatPrefab);
                     registered=nm;
                 }
-                var source=FindObjectsByType<Transform>(FindObjectsInactive.Include,FindObjectsSortMode.None)
+                // The reserved-plot marker is found once and kept until its scene
+                // unloads; re-reading all ~134k transforms every 0.75 s cost ~4 ms.
+                var source=reservedMarker?reservedMarker:FindObjectsByType<Transform>(FindObjectsInactive.Include,FindObjectsSortMode.None)
                     .FirstOrDefault(t=>Regex.IsMatch(t.name,@"^P\d+_Reserved_"));
+                reservedMarker=source;
                 if(source && gameSceneHandle!=source.gameObject.scene.handle)
                 {
                     Plots.Clear();loadedSave=null;gameSceneHandle=source.gameObject.scene.handle;
                     DiscoverPlots(source.gameObject.scene);Changed?.Invoke();
                 }
                 if(!source && gameSceneHandle!=-1){Plots.Clear();loadedSave=null;gameSceneHandle=-1;Changed?.Invoke();}
-                foreach(var map in FindObjectsByType<PaperPixelGames.Core.Tablet.LiveSceneTabletMap>(FindObjectsInactive.Include,FindObjectsSortMode.None))
-                    if(!map.GetComponent<HousingMap>())map.gameObject.AddComponent<HousingMap>();
+                if(Time.unscaledTime>=nextMapScan)
+                {
+                    nextMapScan=Time.unscaledTime+5f;
+                    foreach(var map in FindObjectsByType<PaperPixelGames.Core.Tablet.LiveSceneTabletMap>(FindObjectsInactive.Include,FindObjectsSortMode.None))
+                        if(!map.GetComponent<HousingMap>())map.gameObject.AddComponent<HousingMap>();
+                }
                 if(CanBuild && Plots.Count>0 && loadedSave==null && SavePath!=null)
                 {
                     loadedSave=SavePath;
@@ -143,6 +151,7 @@ namespace SushiAndFish.ResidentialIsland
                 var anchor=rest.gameObject.AddComponent<HousingSeatAnchor>();anchor.pose=rest.exit;anchor.exit=rest.exit;
                 rest.area=SpawnNativeSeat(house,anchor);
                 foreach(var c in rest.area.GetComponentsInChildren<Collider>())c.enabled=false;
+                rest.area.ConfigureCustomPlayerInput(rest.GetComponentsInChildren<Collider>(true));
                 rest.area.GetComponent<CityDiningSeat>().enabled=false;
                 rest.area.WorldUIAnchor.SetVisible(false);
                 rest.area.WorldUIAnchor.enabled=false;

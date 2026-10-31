@@ -2088,7 +2088,7 @@ public class RestaurantManager : NetworkBehaviour, ISaveable<RestaurantData>
 			GastropanData = SaveListSafely(_gastropans, "GastropanData", (GastroPan g) => (!g.IsStaffCarried) ? g.Save() : null),
 			IngredientData = SaveListSafely(_ingredientEntities, "IngredientData", (IngredientEntity ingredient) => (!ingredient.IsPlayerInventoryOwnedForPersistence && !ingredient.IsStaffCarried) ? ingredient.Save() : null),
 			DeadFishData = SaveListSafely(_deadFishes, "DeadFishData", (DeadFish fish) => (!fish.IsPlayerInventoryOwnedForPersistence && !fish.IsStaffCarried) ? fish.Save() : null),
-			WholesaleData = SaveListSafely(_wholeSaleItemsInStock, "WholesaleData", (WholesaleEntity w) => (!w.IsStaffCarried) ? w.Save() : null),
+			WholesaleData = SaveListSafely(_wholeSaleItemsInStock, "WholesaleData", (WholesaleEntity w) => (!w.IsPlayerInventoryOwnedForPersistence && !w.IsStaffCarried) ? w.Save() : null),
 			ChefDeskGastropanData = SaveValueSafely("ChefDeskGastropanData", SaveChefDeskGastropans, new List<ChefDeskGastropanData>()),
 			RestaurantUpgradeData = (_restaurantUpgradeData ?? new RestaurantUpgradeData()),
 			RestaurantSignCustomizationData = SaveValueSafely("RestaurantSignCustomizationData", () => (!(_restaurantSignManager != null)) ? new RestaurantSignCustomizationData() : _restaurantSignManager.Save(), new RestaurantSignCustomizationData()),

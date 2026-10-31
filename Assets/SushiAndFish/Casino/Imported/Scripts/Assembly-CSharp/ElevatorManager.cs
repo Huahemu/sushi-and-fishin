@@ -40,6 +40,20 @@ public class ElevatorManager : NetworkSingleton<ElevatorManager>
 	public float doorMoveDuration;
 
 	public bool spawnNpc = true;
+	public int NativeCurrentFloor => _currentFloorIndex;
+	public Bounds NativeCabBounds => checkCollider.bounds;
+	public Transform NativeCabFrame => checkCollider.transform;
+	public Transform NativeLeftDoor => leftDoor;
+	public Transform NativeRightDoor => rightDoor;
+	public bool NativeFloorButtonAvailable(int floor) => floor>=0&&floor<buttonList.Count&&buttonList[floor]&&buttonList[floor].gameObject.activeInHierarchy;
+	public bool NativeStartPassengerTransfer(int floor)
+	{
+		var transaction=SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.Current;
+		if(!NetworkServer.active||transaction==null||transaction.floor!=floor||transaction.includeOriginalHumans||isTeleporting||IsLocked||_currentFloorIndex==floor)return false;
+		isTeleporting=true;_currentFloorIndex=floor;
+		if(_elevatorRoutine!=null)StopCoroutine(_elevatorRoutine);
+		_elevatorRoutine=StartCoroutine(ServerElevatorRoutine(floor));return true;
+	}
 
 	[Header("SFX")]
 	[SerializeField]
@@ -115,6 +129,8 @@ public class ElevatorManager : NetworkSingleton<ElevatorManager>
 		}
 		else if (!isTeleporting && !IsLocked && _currentFloorIndex != toIndex && CheckPlayersInside())
 		{
+			if(!SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.CanOriginalHumanTransfer(this,out _)||
+				!SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.BeginOriginalHumanTransfer(this,toIndex))return;
 			isTeleporting = true;
 			_currentFloorIndex = toIndex;
 			if (_elevatorRoutine != null)
@@ -181,15 +197,16 @@ public class ElevatorManager : NetworkSingleton<ElevatorManager>
 				spawnedItemInstance.ServerSetEnabled(isEnabled: false);
 			}
 		}
-		ServerTeleportPlayersOutside();
+		if(SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.IncludesOriginalHumans)ServerTeleportPlayersOutside();
 		RpcSetActiveFloorOnly(toIndex);
-		RpcSetMusicPlaylistInAdvance(toIndex);
+		if(SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.IncludesOriginalHumans||SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.IsHostLobbyRecall)RpcSetMusicPlaylistInAdvance(toIndex);
 		yield return null;
-		if (spawnNpc)
+		bool ownedPassengers=(SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.Current?.passengers?.Length??0)>0;
+		if (spawnNpc || ownedPassengers)
 		{
 			NetworkSingleton<NavMeshManager>.Instance.InitializeNavMesh();
 			yield return null;
-			yield return NetworkSingleton<NPCSpawner>.Instance.StartCoroutine(NetworkSingleton<NPCSpawner>.Instance.SpawnNPCsForFloor(toIndex));
+			if(spawnNpc)yield return NetworkSingleton<NPCSpawner>.Instance.StartCoroutine(NetworkSingleton<NPCSpawner>.Instance.SpawnNPCsForFloor(toIndex));
 		}
 		serverOnElevatorMoveEvent?.Raise();
 		if (toIndex == 0 && casinoBuilding != null)
@@ -201,6 +218,7 @@ public class ElevatorManager : NetworkSingleton<ElevatorManager>
 		yield return new WaitForSeconds(doorMoveDuration);
 		NetworkSingleton<GameManager>.Instance.StartDay();
 		isTeleporting = false;
+		SushiAndFish.FriendsLife.CasinoCore.NativeCasinoTransportTransaction.CompleteOriginal(this,toIndex);
 	}
 
 	private void ServerTeleportPlayersOutside()

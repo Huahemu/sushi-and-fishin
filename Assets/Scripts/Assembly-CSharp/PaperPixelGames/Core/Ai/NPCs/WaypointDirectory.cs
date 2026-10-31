@@ -20,7 +20,7 @@ namespace PaperPixelGames.Core.Ai.NPCs
 		{
 			if (!(anchor == null))
 			{
-				Map.Remove(anchor.GlobalKey);
+                if(Map.TryGetValue(anchor.GlobalKey,out var current)&&current==anchor)Map.Remove(anchor.GlobalKey);
 			}
 		}
 
@@ -39,7 +39,7 @@ namespace PaperPixelGames.Core.Ai.NPCs
 		{
 			if (Map.TryGetValue(BuildKey(category, index), out anchor))
 			{
-				return anchor != null;
+				return anchor!=null&&anchor.isActiveAndEnabled&&anchor.gameObject.scene.isLoaded;
 			}
 			return false;
 		}

@@ -1,3 +1,5 @@
+using System;
+
 namespace PaperPixelGames.Core.Ai.NPCs
 {
 	public sealed class ResidentStateMachine
@@ -5,6 +7,10 @@ namespace PaperPixelGames.Core.Ai.NPCs
 		private IResidentState _current;
 
 		private bool _suspended;
+
+        // A local conversation hold must yield before any outside owner
+        // changes the state or controls suspension. No callback rewrites state.
+        public event Action BeforeExternalControl;
 
 		public IResidentState Current => _current;
 
@@ -32,6 +38,7 @@ namespace PaperPixelGames.Core.Ai.NPCs
 			{
 				return false;
 			}
+            BeforeExternalControl?.Invoke();
 			_current?.Exit();
 			_current = next;
 			_current.Enter();
@@ -48,11 +55,13 @@ namespace PaperPixelGames.Core.Ai.NPCs
 
 		public void Suspend()
 		{
+            BeforeExternalControl?.Invoke();
 			_suspended = true;
 		}
 
 		public void Resume()
 		{
+            BeforeExternalControl?.Invoke();
 			_suspended = false;
 		}
 	}

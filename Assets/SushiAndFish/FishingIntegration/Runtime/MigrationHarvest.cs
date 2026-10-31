@@ -6,23 +6,63 @@ using PaperPixelGames.Core.Data;
 using PaperPixelGames.Core.Ocean;
 using PaperPixelGames.Core.Tablet;
 using PaperPixelGames.Core.SaveSystem;
+using PaperPixelGames.Core.Economy;
 using PaperPixelGames.Framework.Patterns;
 using Unity.Netcode;
 using UnityEngine;
 
 namespace SushiAndFish.FishingIntegration {
     public sealed partial class FishingMigration {
+        [Serializable] sealed class FishingSaveVersionProbe { public int version; }
+        bool weaponOwnershipAnchored;
         readonly System.Collections.Generic.HashSet<string> convertingCatches=new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         string SavePath=>string.IsNullOrEmpty(slotKey)?null:Path.Combine(Application.persistentDataPath,"FishingMigration",slotKey+".json");
         void EnsureSlot(){
             var manager=Singleton<SaveManager>.Instance;if(!manager||!manager.HasValidCurrentSlot)return;
             string next=manager.CurrentSaveSlotHostSteamID+"_"+manager.CurrentSaveSlotIndex;
             if(slotKey==next){RestorePending();return;}
-            if(slotKey!=null){SaveWorld();ClearArchipelago();foreach(var fish in catches.Values)if(fish)Destroy(fish.gameObject);catches.Clear();foreach(var actor in actors.Values)if(actor.module)actor.module.Abort();}slotKey=next;SaveData=new FishingWorldSave();
-            if(File.Exists(SavePath)){try{SaveData=JsonUtility.FromJson<FishingWorldSave>(File.ReadAllText(SavePath))??new FishingWorldSave();if(SaveData.version>1)throw new InvalidDataException("Newer fishing save version");SaveData.archive=FishingArchiveData.Decode(JsonUtility.ToJson(SaveData.archive));SaveData.stock=SaveData.stock??new System.Collections.Generic.List<StoredFish>();SaveData.pending=SaveData.pending??new System.Collections.Generic.List<SavedCatch>();SaveData.acquired=SaveData.acquired??new System.Collections.Generic.List<string>();}catch(Exception error){Debug.LogError("Fishing save kept unchanged after read failure: "+error.Message);Config.enabled=false;return;}}
+            if(slotKey!=null){SaveWorld();ClearArchipelago();foreach(var fish in catches.Values)if(fish)Destroy(fish.gameObject);catches.Clear();foreach(var actor in actors.Values)if(actor.module)actor.module.Abort();}
+            // Never carry write permission from the previous slot into a failed load.
+            restored=false;weaponOwnershipAnchored=false;slotKey=next;SaveData=new FishingWorldSave();
+            if(File.Exists(SavePath)){try{
+                string json=File.ReadAllText(SavePath);var loaded=JsonUtility.FromJson<FishingWorldSave>(json);
+                if(loaded==null)throw new InvalidDataException("Fishing save is empty or invalid");
+                // JsonUtility silently accepts unrelated objects such as {}. A real
+                // fishing save always writes a positive schema version; refuse to
+                // overwrite unrecognized or damaged objects that lack one.
+                var version=JsonUtility.FromJson<FishingSaveVersionProbe>(json);
+                if(version==null||version.version<=0)throw new InvalidDataException("Fishing save version is missing or invalid");
+                if(version.version>1)throw new InvalidDataException("Newer fishing save version");
+                // A stock entry without an item ID cannot be displayed or
+                // withdrawn; keep the existing file rather than overwrite it.
+                if(loaded.stock!=null&&loaded.stock.Any(item=>item==null||string.IsNullOrWhiteSpace(item.itemId)))
+                    throw new InvalidDataException("Fishing save has an invalid stock entry");
+                // Pending catches need stable identities; otherwise normalization
+                // would silently discard them before the next save.
+                if(loaded.pending!=null&&loaded.pending.Any(catchData=>catchData==null||string.IsNullOrWhiteSpace(catchData.token)))
+                    throw new InvalidDataException("Fishing save has an invalid pending catch");
+                SaveData=loaded;SaveData.archive=FishingArchiveData.Decode(JsonUtility.ToJson(SaveData.archive));SaveData.stock=SaveData.stock??new System.Collections.Generic.List<StoredFish>();SaveData.pending=SaveData.pending??new System.Collections.Generic.List<SavedCatch>();SaveData.acquired=SaveData.acquired??new System.Collections.Generic.List<string>();
+            }catch(Exception error){Debug.LogError("Fishing save kept unchanged after read failure: "+error.Message);Config.enabled=false;return;}}
+            if(manager.TryGetCurrentSaveSlot(out var slot)&&slot?.GameProgress!=null&&slot.GameProgress.FishingWeaponsAnchored){
+                SaveData.ownedWeapons=slot.GameProgress.FishingWeaponsMask;
+            }
             FishingCaptureLedger.Normalize(SaveData);
             foreach(var actor in actors.Values)if(actor.module)actor.module.inventory.UseSharedData(SaveData.archive);
             restored=true;RestorePending();
+        }
+        public bool TryCaptureNativeWeapons(out int mask){
+            mask=0;var manager=Singleton<SaveManager>.Instance;
+            if(!Server||!restored||!manager||!manager.HasValidCurrentSlot)return false;
+            if(slotKey!=manager.CurrentSaveSlotHostSteamID+"_"+manager.CurrentSaveSlotIndex)return false;
+            mask=SaveData.ownedWeapons;return true;
+        }
+        internal bool EnsureNativeWeaponAnchor(SaveManager manager,EconomyHandler economy){
+            if(!manager||!economy||!TryCaptureNativeWeapons(out var mask))return false;
+            if(weaponOwnershipAnchored)return true;
+            if(manager.SaveFlag||manager.SaveGame()!=SaveResult.Success)return false;
+            if(manager.SaveFlag||!manager.TryGetCurrentSaveSlot(out var slot)||slot?.GameProgress==null||!slot.GameProgress.FishingWeaponsAnchored||slot.GameProgress.FishingWeaponsMask!=mask)return false;
+            if(slot.GameProgress.ShopBalance!=economy.ShopBalance.Value||!string.Equals(slot.GameProgress.ExactGoldStorage,economy.SavedGoldStorage,StringComparison.Ordinal))return false;
+            weaponOwnershipAnchored=true;return true;
         }
         public bool SaveWorld(){
             if(!Server||!restored||SavePath==null)return false;

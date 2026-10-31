@@ -31,7 +31,8 @@ namespace HowToFish {
         MaterialPropertyBlock properties;
         int nextTrace,nextBurst;
         static readonly int BaseColor=Shader.PropertyToID("_BaseColor");
-        static readonly Color Gold=new Color(1,.78f,.23f);
+        // Neon violet tracer: far from the sand hue so the shot stays legible on beaches.
+        static readonly Color TraceColor=new Color(.78f,.22f,1f);
         public static readonly Color BloodColor=new Color(.72f,.018f,.035f);
 
         void Awake(){Initialize();}
@@ -65,9 +66,9 @@ namespace HowToFish {
         public void TraceSegment(Vector3 from,Vector3 to){
             Initialize();if(traces==null)return;var delta=to-from;if(delta.sqrMagnitude<.000001f)return;
             var trace=traces[nextTrace++%traces.Length];var direction=delta.normalized;
-            trace.line.SetPosition(0,to-direction*Mathf.Min(delta.magnitude,4.5f));trace.line.SetPosition(1,to);trace.line.enabled=true;trace.line.startColor=trace.line.endColor=Gold;trace.until=Time.time+tracerLifetime;
+            trace.line.SetPosition(0,to-direction*Mathf.Min(delta.magnitude,4.5f));trace.line.SetPosition(1,to);trace.line.enabled=true;trace.line.startColor=trace.line.endColor=TraceColor;trace.until=Time.time+tracerLifetime;
             trace.tip.SetPositionAndRotation(to,Quaternion.LookRotation(direction));trace.tip.localScale=new Vector3(.024f,.024f,.10f);trace.tipRenderer.enabled=true;
-            properties.SetColor(BaseColor,new Color(1,.96f,.70f));trace.tipRenderer.SetPropertyBlock(properties);
+            properties.SetColor(BaseColor,new Color(.96f,.76f,1f));trace.tipRenderer.SetPropertyBlock(properties);
         }
         public void Muzzle(Transform muzzle){if(muzzle)Impact(muzzle.position,muzzle.forward,HitKind.Muzzle);}
         public void Impact(Vector3 position,Vector3 normal,HitKind kind,Transform wound=null){
@@ -90,7 +91,7 @@ namespace HowToFish {
             foreach(var trace in traces){
                 if(!trace.line.enabled)continue;float remaining=trace.until-Time.time;
                 if(remaining<=0){trace.line.enabled=false;trace.tipRenderer.enabled=false;continue;}
-                var color=Gold;color.a=Mathf.Clamp01(remaining/tracerLifetime);trace.line.startColor=trace.line.endColor=color;
+                var color=TraceColor;color.a=Mathf.Clamp01(remaining/tracerLifetime);trace.line.startColor=trace.line.endColor=color;
                 trace.tipRenderer.enabled=remaining>tracerLifetime*.55f;
             }
             foreach(var burst in bursts){

@@ -15,11 +15,29 @@ using PaperPixelGames.Framework.Patterns;
 using PaperPixelGames.Framework.UI.Notify;
 using PaperPixelGames.Framework.Utility;
 using Unity.Netcode;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace PaperPixelGames.Core.Kitchen.Wholasale
 {
+	// Small per-instance payload for the existing QuickSlot CustomData field.
+	internal static class WholesaleQuickSlotCountCodec
+	{
+		private const string Prefix = "wholesale-count/v1/";
+		public static string Encode(byte quantity)
+		{
+			return Prefix + quantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+		}
+		public static bool TryDecode(string data, out byte quantity)
+		{
+			quantity = 0;
+			return !string.IsNullOrEmpty(data) && data.StartsWith(Prefix, StringComparison.Ordinal) &&
+				byte.TryParse(data.Substring(Prefix.Length), System.Globalization.NumberStyles.None,
+					System.Globalization.CultureInfo.InvariantCulture, out quantity);
+		}
+	}
+
 	public class WholesaleEntity : BaseHoldable, ISaveable<WholesaleData>
 	{
 		public enum PackNotifyId : byte
@@ -1069,6 +1087,19 @@ namespace PaperPixelGames.Core.Kitchen.Wholasale
 				Singleton<HintsManager>.Instance.RemoveHint("RightMouseMechanic");
 				RemoveHeldThrowHint();
 			}
+		}
+
+		public override string SaveCustomData()
+		{
+			return WholesaleQuickSlotCountCodec.Encode(CurrentCount);
+		}
+
+		public override void LoadCustomData(FixedString128Bytes data)
+		{
+			// Empty legacy data has no remaining quantity to infer. The original
+			// spawn default remains; valid zero is an explicit encoded value.
+			if (WholesaleQuickSlotCountCodec.TryDecode(data.ToString(), out var quantity))
+				Load(new WholesaleData { Id = base.ItemSO.Id, Quantity = quantity });
 		}
 
 		public WholesaleData Save()

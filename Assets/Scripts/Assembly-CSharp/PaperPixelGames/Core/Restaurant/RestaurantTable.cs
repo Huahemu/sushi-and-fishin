@@ -2765,6 +2765,10 @@ namespace PaperPixelGames.Core.Restaurant
 				UtilityMethods.Log($"[RestaurantTable] DeliverInteract: FAIL - Matched seat order is null. Index={bestIndex}", LogType.Warning);
 				return;
 			}
+			if (!SushiAndFish.FriendsLife.FriendsSushiDeliveryGate.BeforeDelivery(this, _id, ResidentRestaurantTargetType.DiningTable, bestIndex, customerSeatOrder.OrderId, component2.NetworkObject.NetworkObjectId, Mathf.Max(0, bestEval.Earned)))
+			{
+				return;
+			}
 			Transform child = _trayPointsParent.GetChild(bestIndex);
 			if (!component2.ServerPlaceOnRestaurantTable(child.position, child.rotation.eulerAngles))
 			{
@@ -5660,6 +5664,10 @@ namespace PaperPixelGames.Core.Restaurant
 				return false;
 			}
 			DeliveryEvaluation eval = tray.EvaluateDelivery(customerSeatOrder.Order);
+			if (!SushiAndFish.FriendsLife.FriendsSushiDeliveryGate.BeforeDelivery(this, _id, ResidentRestaurantTargetType.DiningTable, num, customerSeatOrder.OrderId, tray.NetworkObject.NetworkObjectId, Mathf.Max(0, eval.Earned)))
+			{
+				return false;
+			}
 			Transform child = _trayPointsParent.GetChild(num);
 			if (!tray.ServerStaffPlace(employeeId, child.position, child.rotation, onTable: true))
 			{

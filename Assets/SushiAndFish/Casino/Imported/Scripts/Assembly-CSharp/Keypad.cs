@@ -320,7 +320,7 @@ public class Keypad : NetworkBehaviour
 			Network_errorMessage = "Max: " + MoneyFormatter.FormatWithDollar(maxBet);
 			RpcSetDisplayColor(palette.lossRed);
 		}
-		else if (result > NetworkSingleton<MoneyManager>.Instance.balance)
+		else if (result > (SushiAndFish.FriendsLife.ActorWalletRouter.IsNpcInvocation?SushiAndFish.Casino.Original.CasinoRuntimeContext.ReadCoins:NetworkSingleton<MoneyManager>.Instance.balance))
 		{
 			Network_errorMessage = "Not Enough Money";
 			RpcSetDisplayColor(palette.lossRed);
@@ -341,7 +341,7 @@ public class Keypad : NetworkBehaviour
 			Debug.LogWarning("[Server] function 'System.Int64 Keypad::GetPercentageBet(System.Double,System.Boolean)' called when server was not active");
 			return default;
 		}
-		long balance = NetworkSingleton<MoneyManager>.Instance.balance;
+		long balance = (SushiAndFish.FriendsLife.ActorWalletRouter.IsNpcInvocation?SushiAndFish.Casino.Original.CasinoRuntimeContext.ReadCoins:NetworkSingleton<MoneyManager>.Instance.balance);
 		long num = NetworkcasinoGame.MaxBet;
 		if (limitToBalance)
 		{

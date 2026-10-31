@@ -81,9 +81,110 @@ public class Bed : BaseInteractable
 		ServiceLocator.ForSceneOf(this).Register(typeof(Bed), this);
 	}
 
+	// The scene's single sleep authority (BedUI, sleeper count, end of day).
+	// Residential beds call RequestSleep/CancelSleep instead of a scene search.
+	public static Bed Active { get; private set; }
+
+	private bool _externalSleep;
+
+	// BEGIN LOCAL SLEEP PROTOCOL
+	// One Try produces one Enter/Denied terminal. One Remove produces one
+	// Denied closure fence, all on this same reliable Bed NetworkObject.
+	// CancelAwaitOriginal has already sent Remove but still owes the first reply.
+	private enum LocalSleepPhase { Idle, Pending, CancelAwaitOriginal, CancelFence, Active }
+	private enum LocalSleepReply { Ignore, Enter, Denied, Canceled, Released }
+	private sealed class LocalSleepRequests
+	{
+		public LocalSleepPhase Phase { get; private set; }
+		public bool TryBegin()
+		{
+			if (Phase != LocalSleepPhase.Idle) return false;
+			Phase = LocalSleepPhase.Pending; return true;
+		}
+		public bool TryCancel()
+		{
+			if (Phase == LocalSleepPhase.Pending)
+			{ Phase = LocalSleepPhase.CancelAwaitOriginal; return true; }
+			if (Phase == LocalSleepPhase.Active)
+			{ Phase = LocalSleepPhase.CancelFence; return true; }
+			return false;
+		}
+		public LocalSleepReply Enter()
+		{
+			if (Phase == LocalSleepPhase.Pending)
+			{ Phase = LocalSleepPhase.Active; return LocalSleepReply.Enter; }
+			if (Phase == LocalSleepPhase.CancelAwaitOriginal)
+			{ Phase = LocalSleepPhase.CancelFence; return LocalSleepReply.Canceled; }
+			return LocalSleepReply.Ignore;
+		}
+		public LocalSleepReply Denied()
+		{
+			if (Phase == LocalSleepPhase.Pending)
+			{ Phase = LocalSleepPhase.Idle; return LocalSleepReply.Denied; }
+			if (Phase == LocalSleepPhase.CancelAwaitOriginal)
+			{ Phase = LocalSleepPhase.CancelFence; return LocalSleepReply.Canceled; }
+			if (Phase == LocalSleepPhase.CancelFence)
+			{ Phase = LocalSleepPhase.Idle; return LocalSleepReply.Released; }
+			return LocalSleepReply.Ignore;
+		}
+		// Only object/connection lifetime termination may abandon pending replies.
+		public void Reset() { Phase = LocalSleepPhase.Idle; }
+	}
+	// END LOCAL SLEEP PROTOCOL
+	private readonly LocalSleepRequests _localSleepRequests = new LocalSleepRequests();
+
+	public bool IsLocalSleeping => _isSleeping;
+
+	public void RequestSleep()
+	{
+		TryRequestSleep(external: true);
+	}
+
+	private void TryRequestSleep(bool external)
+	{
+		var network = base.NetworkManager;
+		if (!base.IsSpawned || !network || !network.IsListening || !network.IsClient || _isSleeping || !_localSleepRequests.TryBegin())
+		{
+			return;
+		}
+		_externalSleep = external;
+		// Pending must exist before send: a host can receive Enter in this stack.
+		ServerTrySleepRpc(network.LocalClientId, SteamClient.IsValid ? SteamClient.SteamId.Value : 0);
+	}
+
+	public void CancelSleep()
+	{
+		// This also covers a Try whose Enter/Denied has not arrived yet.
+		// Duplicate cancel/ForceWake cannot enqueue a third closure fence.
+		bool sendRemove = _localSleepRequests.TryCancel();
+		if (_isSleeping) ExitSleepLocal();
+		if (!sendRemove) return;
+		var network = base.NetworkManager;
+		if (!base.IsSpawned || !network || !network.IsListening)
+		{
+			_localSleepRequests.Reset(); _externalSleep = false; return;
+		}
+		// Cancel state is recorded before send for host synchronous closure.
+		ServerRemoveSleeperRpc(network.LocalClientId);
+	}
+
+	public override void OnNetworkDespawn()
+	{
+		_localSleepRequests.Reset();
+		if (_isSleeping) ExitSleepLocal();
+		_externalSleep = false;
+		if (Active == this)
+		{
+			Active = null;
+		}
+		base.OnNetworkDespawn();
+	}
+
 	public override void OnNetworkSpawn()
 	{
 		base.OnNetworkSpawn();
+		_localSleepRequests.Reset(); _isSleeping = false; _externalSleep = false;
+		Active = this;
 		if (_sleepCanvas != null)
 		{
 			_sleepCanvas.SetActive(value: false);
@@ -98,15 +199,11 @@ public class Bed : BaseInteractable
 		base.ClientMouse1(interactor, phase);
 		if (phase == InputActionPhase.Started && interactor.Player.FirstPersonCharacter.IsGrounded())
 		{
-			ulong localClientId = NetworkManager.Singleton.LocalClientId;
-			ulong steamIdValue = (SteamClient.IsValid ? SteamClient.SteamId.Value : 0);
-			if (!_isSleeping)
+			if (_isSleeping || _localSleepRequests.Phase != LocalSleepPhase.Idle)
 			{
-				ServerTrySleepRpc(localClientId, steamIdValue);
-				return;
+				CancelSleep(); return;
 			}
-			ServerRemoveSleeperRpc(localClientId);
-			ExitSleepLocal();
+			TryRequestSleep(external: false);
 		}
 	}
 
@@ -139,14 +236,19 @@ public class Bed : BaseInteractable
 		{
 			ClientSleepDeniedRpc(clientId);
 		}
-		else if (_sleepers.Add(clientId))
+		else
 		{
+			bool added = _sleepers.Add(clientId);
+			// Even an idempotent Try needs exactly one terminal reply.
 			ClientEnterSleepRpc(clientId);
-			ClientUpdateSleeperTextRpc(_sleepers.Count);
-			ServerRefreshSleepingPlayersUi();
-			if (_sleepers.Count == _maxSleeperCount)
+			if (added)
 			{
-				HandleEveryoneSleeping();
+				ClientUpdateSleeperTextRpc(_sleepers.Count);
+				ServerRefreshSleepingPlayersUi();
+				if (_sleepers.Count == _maxSleeperCount)
+				{
+					HandleEveryoneSleeping();
+				}
 			}
 		}
 	}
@@ -177,6 +279,9 @@ public class Bed : BaseInteractable
 				ServerRefreshSleepingPlayersUi();
 				CancelServerSleepRoutineIfAny();
 			}
+			// Requester-specific closure, even if Try was denied or already removed.
+			// The local cancellation phase consumes this without a denial toast.
+			ClientSleepDeniedRpc(clientId);
 		}
 	}
 
@@ -485,7 +590,8 @@ public class Bed : BaseInteractable
 		if (__rpc_exec_stage == __RpcExecStage.Execute)
 		{
 			__rpc_exec_stage = __RpcExecStage.Send;
-			if (NetworkManager.Singleton.LocalClientId == clientId)
+			if (NetworkManager.Singleton.LocalClientId == clientId &&
+				_localSleepRequests.Enter() == LocalSleepReply.Enter)
 			{
 				EnterSleepLocal();
 			}
@@ -511,10 +617,9 @@ public class Bed : BaseInteractable
 		if (__rpc_exec_stage == __RpcExecStage.Execute)
 		{
 			__rpc_exec_stage = __RpcExecStage.Send;
-			if (_isSleeping)
-			{
-				ExitSleepLocal();
-			}
+			// Wake clears presentation and intent, but preserves reply drainage.
+			// Resetting Pending here could let a late Enter match a new request.
+			CancelSleep();
 		}
 	}
 
@@ -563,7 +668,13 @@ public class Bed : BaseInteractable
 			__rpc_exec_stage = __RpcExecStage.Send;
 			if (NetworkManager.Singleton.LocalClientId == clientId)
 			{
-				Singleton<NotifyManager>.Instance.ShowToast("You can sleep after 21:00");
+				var reply = _localSleepRequests.Denied();
+				if (reply == LocalSleepReply.Denied)
+				{
+					_externalSleep = false;
+					Singleton<NotifyManager>.Instance.ShowToast("You can sleep after 21:00");
+				}
+				else if (reply == LocalSleepReply.Released) _externalSleep = false;
 			}
 		}
 	}
@@ -623,7 +734,15 @@ public class Bed : BaseInteractable
 		{
 			_sleepCanvas.SetActive(value: false);
 		}
-		_player.ResumeCharacter();
+		var network = base.NetworkManager;
+		var playerObject = network ? network.LocalClient?.PlayerObject : null;
+		var player = playerObject ? playerObject.GetComponent<PPG_Player>() : null;
+		if (player) player.ResumeCharacter();
+		if (_externalSleep)
+		{
+			_externalSleep = false;
+			return;
+		}
 		Singleton<HintsManager>.Instance.AddHint("LeftMouseMechanic", "key_use");
 	}
 

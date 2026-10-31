@@ -4398,13 +4398,22 @@ namespace PaperPixelGames.Core.Player
 			{
 				Singleton<HintsManager>.Instance?.AddPermanentHint("OpenSettings", "key_exit");
 			}
+			// Seats/loungers open in first person (no hands/tablet); the original
+			// right-click toggle still switches to the third-person emote camera.
+			if (base.IsOwner && _staticEmoteCameraToggleEnabled && CurrentEmoteArea != null && !_staticEmoteFpsCameraActive)
+			{
+				OnStaticEmoteCameraToggleInput(InputActionPhase.Started);
+			}
 		}
 
 		public void EndStaticEmote()
 		{
 			if (_staticEmoteActive)
 			{
-				bool num = CurrentEmoteArea != null && !_swingEmoteActive;
+				// Snapshot the area: the release RPC below runs synchronously on a
+				// host and EmoteArea's response callback may clear CurrentEmoteArea.
+				EmoteArea exitArea = CurrentEmoteArea;
+				bool num = exitArea != null && !_swingEmoteActive;
 				Singleton<InputManager>.Instance.InputHandler.Mouse2 -= OnStaticEmoteCameraToggleInput;
 				_staticEmoteFpsCameraActive = false;
 				_staticEmoteCameraToggleEnabled = false;
@@ -4416,20 +4425,24 @@ namespace PaperPixelGames.Core.Player
 				ResumeConstraintsIfAllowed();
 				_staticEmoteActive = false;
 				Vector3 position = base.transform.position;
-                if (CurrentEmoteArea != null && CurrentEmoteArea.TryGetComponent<SushiAndFish.CityExpansion.CityDiningSeat>(out var diningSeat) && diningSeat.approach)
+                if (exitArea != null && exitArea.TryGetComponent<SushiAndFish.CityExpansion.CityDiningSeat>(out var diningSeat) && diningSeat.approach)
                     position = diningSeat.approach.position;
 				Quaternion quaternion = FlattenPitchAndRoll(base.transform.rotation);
 				ApplyStaticEmoteExitPoseLocal(position, quaternion);
 				TryRestoreCharacterControlAfterModeExit();
-				if (CurrentEmoteArea != null)
+				if (exitArea != null)
 				{
-					CurrentEmoteArea.ServerChangeSomeoneUsingRpc(value: false);
-					CurrentEmoteArea.WorldUIAnchor.SetVisible(value: true);
+					exitArea.ServerChangeSomeoneUsingRpc(value: false);
+					if (exitArea.WorldUIAnchor != null)
+					{
+						exitArea.WorldUIAnchor.SetVisible(value: true);
+					}
 					ServerApplyStaticEmoteExitPoseRpc(position, quaternion);
 					CurrentEmoteArea = null;
 				}
 				SetTPSActionCamera(status: false);
 				SwitchToFpsCam();
+				ShowViewModel();
 				ShowCursor();
 				if (num)
 				{
@@ -9979,12 +9992,12 @@ namespace PaperPixelGames.Core.Player
 
 		public void OnToolSelect(IWheelSlice data)
 		{
-            if(SushiAndFish.FishingIntegration.FishingMigration.OpenNativeHarpoon(this,data)){LastToolAction=ToggleHarpoon;return;}
-            if(SushiAndFish.FishingIntegration.FishingMigration.OpenFishingEquipment(this,data)){LastToolAction=ToggleFishingRod;return;}
 			if (data == null || !(data is BaseToolData baseToolData) || IsUsingEmoteArea)
 			{
 				return;
 			}
+            if(SushiAndFish.FishingIntegration.FishingMigration.OpenNativeHarpoon(this,data)){LastToolAction=ToggleHarpoon;return;}
+            if(SushiAndFish.FishingIntegration.FishingMigration.OpenFishingEquipment(this,data)){LastToolAction=ToggleFishingRod;return;}
 			UtilityMethods.Log("[PPG_Player_Wheel] Selected Tool:" + baseToolData.Name);
 			if (!(baseToolData is DivingEquipmentData))
 			{
